@@ -17,4 +17,5 @@
 
 # Test
 testdata/
+!testdata/README.md
 covprofile
