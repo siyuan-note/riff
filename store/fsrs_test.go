@@ -27,7 +27,10 @@ import (
 )
 
 func TestStoreLoadSave(t *testing.T) {
-	const storePath = "../testdata/"
+	os.MkdirAll("testdata", 0755)
+	defer os.RemoveAll("testdata")
+
+	const storePath = "testdata"
 	store := NewFSRSStore(storePath)
 	defer os.Remove(store.getMsgPackPath())
 

@@ -28,10 +28,11 @@ import (
 )
 
 func TestJSONMsgPack(t *testing.T) {
+	os.MkdirAll("testdata", 0755)
+	defer os.RemoveAll("testdata")
+
 	const cardsJSON = "testdata/cards.json"
-	defer os.Remove(cardsJSON)
 	const cardsMsgPack = "testdata/cards.msgpack"
-	defer os.Remove(cardsMsgPack)
 
 	p := fsrs.DefaultParam()
 	start := time.Now()
