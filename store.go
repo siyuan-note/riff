@@ -19,6 +19,7 @@ package riff
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/riff/fsrs"
@@ -26,12 +27,22 @@ import (
 )
 
 type Store struct {
-	Path  string       // 数据库文件路径，如：F:\\SiYuan\\data\\storage\\
+	Path  string       // 数据文件夹路径，如：F:\\SiYuan\\data\\storage\\
 	Cards []*fsrs.Card // 卡片列表
 }
 
 func NewStore(path string) *Store {
 	return &Store{Path: path}
+}
+
+func (store *Store) GetDueCards() (ret []*fsrs.Card) {
+	now := time.Now()
+	for _, c := range store.Cards {
+		if now.After(c.Due) {
+			ret = append(ret, c)
+		}
+	}
+	return
 }
 
 func (store *Store) Load() (err error) {
