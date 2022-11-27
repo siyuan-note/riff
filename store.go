@@ -15,3 +15,47 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package riff
+
+import (
+	"os"
+
+	"github.com/siyuan-note/logging"
+	"github.com/siyuan-note/riff/fsrs"
+	"github.com/vmihailenco/msgpack/v5"
+)
+
+type Store struct {
+	Path  string       // 数据库文件路径，如：F:\\SiYuan\\data\\storage\\riff.msgpack
+	Cards []*fsrs.Card // 卡片列表
+}
+
+func NewStore(path string) *Store {
+	return &Store{Path: path}
+}
+
+func (store *Store) Load() (err error) {
+	data, err := os.ReadFile(store.Path)
+	if nil != err {
+		logging.LogErrorf("load store [%s] failed: %s", store.Path, err)
+		return
+	}
+
+	if err = msgpack.Unmarshal(data, &store.Cards); nil != err {
+		logging.LogErrorf("unmarshal store [%s] failed: %s", store.Path, err)
+		return
+	}
+	return
+}
+
+func (store *Store) Save() (err error) {
+	data, err := msgpack.Marshal(store.Cards)
+	if nil != err {
+		logging.LogErrorf("marshal store [%s] failed: %s", store.Path, err)
+		return
+	}
+	if err = os.WriteFile(store.Path, data, 0644); nil != err {
+		logging.LogErrorf("save store [%s] failed: %s", store.Path, err)
+		return
+	}
+	return
+}

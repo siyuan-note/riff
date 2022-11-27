@@ -26,7 +26,42 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func TestStoreSaveLoad(t *testing.T) {
+func TestStoreLoadSave(t *testing.T) {
+	const storePath = "testdata/cards.msgpack"
+	defer os.Remove(storePath)
+
+	store := NewStore(storePath)
+	p := fsrs.DefaultParam()
+	start := time.Now()
+	repeatTime := start
+	for i := 0; i < 10000; i++ {
+		card := fsrs.NewCard()
+		store.Cards = append(store.Cards, &card)
+
+		for j := 0; j < 10; j++ {
+			schedulingCards := p.Repeat(&card, repeatTime)
+			card = schedulingCards.Hard
+			repeatTime = card.Due
+		}
+		repeatTime = start
+	}
+	cardsLen := len(store.Cards)
+	t.Logf("cards len [%d]", cardsLen)
+
+	if err := store.Save(); nil != err {
+		t.Fatal(err)
+	}
+
+	store.Cards = nil
+	if err := store.Load(); nil != err {
+		t.Fatal(err)
+	}
+	if cardsLen != len(store.Cards) {
+		t.Fatal("cards len not equal")
+	}
+}
+
+func TestJSONMsgPack(t *testing.T) {
 	const cardsJSON = "testdata/cards.json"
 	defer os.Remove(cardsJSON)
 	const cardsMsgPack = "testdata/cards.msgpack"
