@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/88250/gulu"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/siyuan-note/riff/fsrs"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -96,6 +97,16 @@ func TestJSONMsgPack(t *testing.T) {
 	t.Logf("save by [json] elapsed [%dms], size [%.2fMB]", time.Since(now).Milliseconds(), float64(len(data))/1024/1024)
 
 	now = time.Now()
+	data, err = jsoniter.Marshal(cards)
+	if nil != err {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(cardsJSON, data, 0644); nil != err {
+		t.Fatal(err)
+	}
+	t.Logf("save by [jsoniter] elapsed [%dms], size [%.2fMB]", time.Since(now).Milliseconds(), float64(len(data))/1024/1024)
+
+	now = time.Now()
 	data, err = msgpack.Marshal(cards)
 	if nil != err {
 		t.Fatal(err)
@@ -117,6 +128,19 @@ func TestJSONMsgPack(t *testing.T) {
 		t.Fatal("cards len not equal")
 	}
 	t.Logf("load by [json] elapsed [%dms], size [%.2fMB]", time.Since(now).Milliseconds(), float64(len(data))/1024/1024)
+
+	now = time.Now()
+	data, err = os.ReadFile(cardsJSON)
+	if nil != err {
+		t.Fatal(err)
+	}
+	if err = jsoniter.Unmarshal(data, &cards); nil != err {
+		t.Fatal(err)
+	}
+	if cardsLen != len(cards) {
+		t.Fatal("cards len not equal")
+	}
+	t.Logf("load by [jsoniter] elapsed [%dms], size [%.2fMB]", time.Since(now).Milliseconds(), float64(len(data))/1024/1024)
 
 	now = time.Now()
 	data, err = os.ReadFile(cardsMsgPack)
