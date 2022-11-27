@@ -19,7 +19,9 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
+	"github.com/88250/gulu"
 	"github.com/siyuan-note/logging"
 )
 
@@ -35,14 +37,37 @@ type Store interface {
 	// Save 保存全部闪卡数据。
 	Save(data []byte) error
 
+	// Review 闪卡复习。
+	Review(id int64, rating Rating) error
+
 	// Dues 获取所有到期的闪卡 IDs。
 	Dues() []int64
 }
+
+// Rating 描述了闪卡复习的评分。
+type Rating int8
+
+const (
+	Again Rating = iota // 完全不会，必须再复习一遍
+	Hard                // 有点难
+	Good                // 一般
+	Easy                // 很容易
+)
 
 // BaseStore 描述了基础的闪卡存储。
 type BaseStore struct {
 	algo    string // 算法名称，如：fsrs
 	saveDir string // 数据文件夹路径，如：F:\\SiYuan\\data\\storage\\riff\\
+
+	lock *sync.Mutex
+}
+
+func NewBaseStore(algo, saveDir string) *BaseStore {
+	return &BaseStore{
+		algo:    algo,
+		saveDir: saveDir,
+		lock:    &sync.Mutex{},
+	}
 }
 
 func (store *BaseStore) Algo() string {
@@ -65,7 +90,7 @@ func (store *BaseStore) Load() (data []byte, err error) {
 
 func (store *BaseStore) Save(data []byte) (err error) {
 	msgpackPath := store.getMsgPackPath()
-	if err = os.WriteFile(msgpackPath, data, 0644); nil != err {
+	if err = gulu.File.WriteFileSafer(msgpackPath, data, 0644); nil != err {
 		logging.LogErrorf("save cards [%s] failed: %s", msgpackPath, err)
 		return
 	}
