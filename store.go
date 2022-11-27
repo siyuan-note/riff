@@ -18,6 +18,7 @@ package riff
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/riff/fsrs"
@@ -25,7 +26,7 @@ import (
 )
 
 type Store struct {
-	Path  string       // 数据库文件路径，如：F:\\SiYuan\\data\\storage\\riff.msgpack
+	Path  string       // 数据库文件路径，如：F:\\SiYuan\\data\\storage\\
 	Cards []*fsrs.Card // 卡片列表
 }
 
@@ -34,14 +35,15 @@ func NewStore(path string) *Store {
 }
 
 func (store *Store) Load() (err error) {
-	data, err := os.ReadFile(store.Path)
+	msgpackPath := store.getMsgPackPath()
+	data, err := os.ReadFile(msgpackPath)
 	if nil != err {
-		logging.LogErrorf("load store [%s] failed: %s", store.Path, err)
+		logging.LogErrorf("load store [%s] failed: %s", msgpackPath, err)
 		return
 	}
 
 	if err = msgpack.Unmarshal(data, &store.Cards); nil != err {
-		logging.LogErrorf("unmarshal store [%s] failed: %s", store.Path, err)
+		logging.LogErrorf("unmarshal store [%s] failed: %s", msgpackPath, err)
 		return
 	}
 	return
@@ -50,12 +52,18 @@ func (store *Store) Load() (err error) {
 func (store *Store) Save() (err error) {
 	data, err := msgpack.Marshal(store.Cards)
 	if nil != err {
-		logging.LogErrorf("marshal store [%s] failed: %s", store.Path, err)
+		logging.LogErrorf("marshal store failed: %s", err)
 		return
 	}
-	if err = os.WriteFile(store.Path, data, 0644); nil != err {
-		logging.LogErrorf("save store [%s] failed: %s", store.Path, err)
+
+	msgpackPath := store.getMsgPackPath()
+	if err = os.WriteFile(msgpackPath, data, 0644); nil != err {
+		logging.LogErrorf("save store [%s] failed: %s", msgpackPath, err)
 		return
 	}
 	return
+}
+
+func (store *Store) getMsgPackPath() string {
+	return filepath.Join(store.Path, "riff.msgpack")
 }

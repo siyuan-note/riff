@@ -27,10 +27,10 @@ import (
 )
 
 func TestStoreLoadSave(t *testing.T) {
-	const storePath = "testdata/cards.msgpack"
-	defer os.Remove(storePath)
-
+	const storePath = "testdata/"
 	store := NewStore(storePath)
+
+	defer os.Remove(store.getMsgPackPath())
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start
