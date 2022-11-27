@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package riff
+package store
 
 import (
 	"os"
@@ -26,41 +26,6 @@ import (
 	"github.com/siyuan-note/riff/fsrs"
 	"github.com/vmihailenco/msgpack/v5"
 )
-
-func TestStoreLoadSave(t *testing.T) {
-	const storePath = "testdata/"
-	store := NewStore(storePath)
-
-	defer os.Remove(store.getMsgPackPath())
-	p := fsrs.DefaultParam()
-	start := time.Now()
-	repeatTime := start
-	for i := 0; i < 10000; i++ {
-		card := fsrs.NewCard()
-		store.Cards = append(store.Cards, &card)
-
-		for j := 0; j < 10; j++ {
-			schedulingCards := p.Repeat(&card, repeatTime)
-			card = schedulingCards.Hard
-			repeatTime = card.Due
-		}
-		repeatTime = start
-	}
-	cardsLen := len(store.Cards)
-	t.Logf("cards len [%d]", cardsLen)
-
-	if err := store.Save(); nil != err {
-		t.Fatal(err)
-	}
-
-	store.Cards = nil
-	if err := store.Load(); nil != err {
-		t.Fatal(err)
-	}
-	if cardsLen != len(store.Cards) {
-		t.Fatal("cards len not equal")
-	}
-}
 
 func TestJSONMsgPack(t *testing.T) {
 	const cardsJSON = "testdata/cards.json"
