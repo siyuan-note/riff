@@ -17,31 +17,130 @@
 package riff
 
 import (
-	"github.com/siyuan-note/riff/store"
+	"errors"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/88250/gulu"
+	"github.com/siyuan-note/logging"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Deck 描述了一套闪卡包。
 type Deck struct {
-	Name    string                // 唯一名称
-	Desc    string                // 描述
-	Created int64                 // 创建时间
-	Updated int64                 // 更新时间
-	Cards   map[string]store.Card // 闪卡集合 <cardID, card>
+	Name      string            // 唯一名称
+	Algo      Algo              // 间隔复习算法
+	Desc      string            // 描述
+	Created   int64             // 创建时间
+	Updated   int64             // 更新时间
+	BlockCard map[string]string // 内容块 ID 到闪卡 ID 的映射
 
-	store store.Store // 底层存储
+	store Store // 底层存储
+	lock  *sync.Mutex
 }
 
-// NewDeck 创建一套命名为 name 的闪卡包，store 为底层数据存储和间隔复习算法的实现。
-func NewDeck(name string, store store.Store) *Deck {
-	return &Deck{Name: name, store: store}
+// LoadDeck 从文件夹 saveDir 路径上加载一套命名为 name 的闪卡包，store 为底层数据存储和间隔复习算法的实现。
+func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
+	var store Store
+	switch algo {
+	case AlgoFSRS:
+		store = NewFSRSStore(saveDir)
+		err = store.Load()
+	default:
+		err = errors.New("not supported yet")
+		return
+	}
+	if nil != err {
+		return
+	}
+
+	deck = &Deck{
+		Name:      name,
+		Algo:      algo,
+		Created:   time.Now().UnixMilli(),
+		BlockCard: map[string]string{},
+		store:     store,
+		lock:      &sync.Mutex{},
+	}
+
+	dataPath := filepath.Join(saveDir, name+".msgpack")
+	if gulu.File.IsExist(dataPath) {
+		var data []byte
+		data, err = os.ReadFile(dataPath)
+		if nil != err {
+			logging.LogErrorf("load deck [%s] failed: %s", deck.Name, err)
+			return
+		}
+
+		err = msgpack.Unmarshal(data, deck)
+		if nil != err {
+			logging.LogErrorf("load deck [%s] failed: %s", deck.Name, err)
+			return
+		}
+	}
+	return
+}
+
+// AddCard 新建一张闪卡。
+func (deck *Deck) AddCard(cardID, blockID string) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+	deck.store.AddCard(cardID, blockID)
+	deck.BlockCard[blockID] = cardID
+}
+
+// RemoveCard 删除一张闪卡。
+func (deck *Deck) RemoveCard(cardID string) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+	removed := deck.store.RemoveCard(cardID)
+	delete(deck.BlockCard, removed.BlockID())
+}
+
+// GetCard 获取指定 ID 的闪卡。
+func (deck *Deck) GetCard(cardID string) Card {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+	return deck.store.GetCard(cardID)
+}
+
+// Save 保存闪卡包。
+func (deck *Deck) Save() (err error) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	err = deck.store.Save()
+	if nil != err {
+		logging.LogErrorf("save deck [%s] failed: %s", deck.Name, err)
+		return
+	}
+
+	saveDir := deck.store.GetSaveDir()
+	dataPath := filepath.Join(saveDir, deck.Name+".msgpack")
+	data, err := msgpack.Marshal(deck)
+	if nil != err {
+		logging.LogErrorf("save deck failed: %s", err)
+		return
+	}
+	if err = gulu.File.WriteFileSafer(dataPath, data, 0644); nil != err {
+		logging.LogErrorf("save deck failed: %s", err)
+		return
+	}
+	return
 }
 
 // Review 复习一张闪卡，rating 为复习评分结果。
-func (deck *Deck) Review(cardID string, rating store.Rating) {
+func (deck *Deck) Review(cardID string, rating Rating) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
 	deck.store.Review(cardID, rating)
 }
 
 // Dues 返回所有到期的闪卡。
-func (deck *Deck) Dues() (ret []store.Card) {
+func (deck *Deck) Dues() (ret []Card) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
 	return deck.store.Dues()
 }

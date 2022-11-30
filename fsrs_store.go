@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package store
+package riff
 
 import (
 	"os"
@@ -41,35 +41,32 @@ func NewFSRSStore(saveDir string) *FSRSStore {
 	}
 }
 
-type FSRSCard struct {
-	*BaseCard
-	c *fsrs.Card
-}
-
-func (card *FSRSCard) Impl() interface{} {
-	return card.c
-}
-
-func (card *FSRSCard) SetImpl(c interface{}) {
-	card.c = c.(*fsrs.Card)
-}
-
-func (store *FSRSStore) AddCard(card Card) {
+func (store *FSRSStore) AddCard(id, blockID string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
-	store.cards[card.ID()] = card.(*FSRSCard)
+
+	c := fsrs.NewCard()
+	card := &FSRSCard{BaseCard: &BaseCard{id, blockID}, C: &c}
+	store.cards[id] = card
+	return card
 }
 
 func (store *FSRSStore) GetCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
+
 	return store.cards[id]
 }
 
-func (store *FSRSStore) RemoveCard(id string) {
+func (store *FSRSStore) RemoveCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
+	card := store.cards[id]
+	if nil == card {
+		return nil
+	}
 	delete(store.cards, id)
+	return card
 }
 
 func (store *FSRSStore) Review(cardId string, rating Rating) {
@@ -83,7 +80,7 @@ func (store *FSRSStore) Review(cardId string, rating Rating) {
 		return
 	}
 
-	schedulingInfo := store.params.Repeat(*card.c, now)
+	schedulingInfo := store.params.Repeat(*card.C, now)
 	updated := schedulingInfo[fsrs.Rating(rating)].Card
 	card.SetImpl(&updated)
 	store.cards[cardId] = card
@@ -110,6 +107,10 @@ func (store *FSRSStore) Load() (err error) {
 
 	store.cards = map[string]*FSRSCard{}
 	p := store.getMsgPackPath()
+	if !gulu.File.IsExist(p) {
+		return
+	}
+
 	data, err := os.ReadFile(p)
 	if nil != err {
 		logging.LogErrorf("load cards failed: %s", err)
@@ -136,4 +137,17 @@ func (store *FSRSStore) Save() (err error) {
 		return
 	}
 	return
+}
+
+type FSRSCard struct {
+	*BaseCard
+	C *fsrs.Card
+}
+
+func (card *FSRSCard) Impl() interface{} {
+	return card.C
+}
+
+func (card *FSRSCard) SetImpl(c interface{}) {
+	card.C = c.(*fsrs.Card)
 }

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package store
+package riff
 
 import (
 	"os"
@@ -24,24 +24,22 @@ import (
 	"github.com/open-spaced-repetition/go-fsrs"
 )
 
-func TestStoreLoadSave(t *testing.T) {
-	os.MkdirAll("testdata", 0755)
-	defer os.RemoveAll("testdata")
-
+func TestFSRSStore(t *testing.T) {
 	const storePath = "testdata"
-	store := NewFSRSStore(storePath)
-	defer os.Remove(store.getMsgPackPath())
+	os.MkdirAll(storePath, 0755)
+	defer os.RemoveAll(storePath)
 
+	store := NewFSRSStore(storePath)
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start
 	ids := map[string]bool{}
 	for i := 0; i < 10000; i++ {
-		c := fsrs.NewCard()
 		id, blockID := newID(), newID()
+		store.AddCard(id, blockID)
+		card := store.GetCard(id)
+		c := *card.Impl().(*fsrs.Card)
 		ids[id] = true
-		card := &FSRSCard{BaseCard: &BaseCard{id, blockID}, c: &c}
-		store.AddCard(card)
 
 		for j := 0; j < 10; j++ {
 			schedulingInfo := p.Repeat(c, repeatTime)

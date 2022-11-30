@@ -14,55 +14,54 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package store
+package riff
 
 import (
 	"math/rand"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/88250/gulu"
-	"github.com/siyuan-note/logging"
 )
 
 // Store 描述了闪卡存储。
 type Store interface {
 
 	// AddCard 添加一张卡片。
-	AddCard(card Card)
+	AddCard(id, blockID string) Card
 
 	// GetCard 获取一张卡片。
 	GetCard(id string) Card
 
 	// RemoveCard 移除一张卡片。
-	RemoveCard(id string)
+	RemoveCard(id string) Card
 
 	// Review 闪卡复习。
-	Review(id string, rating Rating) error
+	Review(id string, rating Rating)
 
 	// Dues 获取所有到期的闪卡列表。
 	Dues() []Card
 
 	// Algo 返回算法名称，如：fsrs。
-	Algo() string
+	Algo() Algo
 
 	// Load 从持久化存储中加载全部闪卡到内存。
 	Load() (err error)
 
 	// Save 将全部闪卡从内存保存到持久化存储中。
 	Save() error
+
+	// GetSaveDir 获取数据文件夹路径。
+	GetSaveDir() string
 }
 
 // BaseStore 描述了基础的闪卡存储实现。
 type BaseStore struct {
-	algo    string      // 算法名称，如：fsrs
+	algo    Algo        // 算法名称，如：fsrs
 	saveDir string      // 数据文件夹路径，如：F:\\SiYuan\\data\\storage\\riff\\
 	lock    *sync.Mutex // 操作时需要用到的锁
 }
 
-func NewBaseStore(algo, saveDir string) *BaseStore {
+func NewBaseStore(algo Algo, saveDir string) *BaseStore {
 	return &BaseStore{
 		algo:    algo,
 		saveDir: saveDir,
@@ -70,31 +69,16 @@ func NewBaseStore(algo, saveDir string) *BaseStore {
 	}
 }
 
-func (store *BaseStore) Algo() string {
+func (store *BaseStore) Algo() Algo {
 	return store.algo
 }
 
+func (store *BaseStore) GetSaveDir() string {
+	return store.saveDir
+}
+
 func (store *BaseStore) getMsgPackPath() string {
-	return filepath.Join(store.saveDir, store.algo+".msgpack")
-}
-
-func (store *BaseStore) Load() (data []byte, err error) {
-	msgpackPath := store.getMsgPackPath()
-	data, err = os.ReadFile(msgpackPath)
-	if nil != err {
-		logging.LogErrorf("load cards [%s] failed: %s", msgpackPath, err)
-		return
-	}
-	return
-}
-
-func (store *BaseStore) Save(data []byte) (err error) {
-	msgpackPath := store.getMsgPackPath()
-	if err = gulu.File.WriteFileSafer(msgpackPath, data, 0644); nil != err {
-		logging.LogErrorf("save cards [%s] failed: %s", msgpackPath, err)
-		return
-	}
-	return
+	return filepath.Join(store.saveDir, string(store.algo)+".msgpack")
 }
 
 // Rating 描述了闪卡复习的评分。
@@ -105,6 +89,14 @@ const (
 	Hard                // 有点难
 	Good                // 一般
 	Easy                // 很容易
+)
+
+// Algo 描述了闪卡复习算法的名称。
+type Algo string
+
+const (
+	AlgoFSRS Algo = "fsrs"
+	AlgoSM2  Algo = "sm2"
 )
 
 func newID() string {

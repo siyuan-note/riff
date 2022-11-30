@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package store
+package riff
 
 // Card 描述了闪卡。
 type Card interface {
@@ -33,14 +33,14 @@ type Card interface {
 
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	id      string
-	blockID string
+	CID string
+	BID string
 }
 
 func (card *BaseCard) ID() string {
-	return card.id
+	return card.CID
 }
 
 func (card *BaseCard) BlockID() string {
-	return card.blockID
+	return card.BID
 }
