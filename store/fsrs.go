@@ -17,57 +17,123 @@
 package store
 
 import (
+	"os"
 	"time"
 
+	"github.com/88250/gulu"
+	"github.com/open-spaced-repetition/go-fsrs"
 	"github.com/siyuan-note/logging"
-	"github.com/siyuan-note/riff/fsrs"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type FSRSStore struct {
 	*BaseStore
 
-	cards  []*fsrs.Card
+	cards  map[string]*FSRSCard
 	params fsrs.Parameters
 }
 
 func NewFSRSStore(saveDir string) *FSRSStore {
-	return &FSRSStore{BaseStore: NewBaseStore("fsrs", saveDir), params: fsrs.DefaultParam()}
+	return &FSRSStore{
+		BaseStore: NewBaseStore("fsrs", saveDir),
+		cards:     map[string]*FSRSCard{},
+		params:    fsrs.DefaultParam(),
+	}
 }
 
-func (store *FSRSStore) Review(cardId int64, rating Rating) {
+type FSRSCard struct {
+	*BaseCard
+	c *fsrs.Card
+}
+
+func (card *FSRSCard) Impl() interface{} {
+	return card.c
+}
+
+func (card *FSRSCard) SetImpl(c interface{}) {
+	card.c = c.(*fsrs.Card)
+}
+
+func (store *FSRSStore) AddCard(card Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	store.cards[card.ID()] = card.(*FSRSCard)
+}
+
+func (store *FSRSStore) GetCard(id string) Card {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	return store.cards[id]
+}
+
+func (store *FSRSStore) RemoveCard(id string) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	delete(store.cards, id)
+}
+
+func (store *FSRSStore) Review(cardId string, rating Rating) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
 	now := time.Now()
-	for i, c := range store.cards {
-		if c.Id == cardId {
-			schedulingCards := store.params.Repeat(c, now)
-			switch rating {
-			case Again:
-				c = &schedulingCards.Again
-			case Hard:
-				c = &schedulingCards.Hard
-			case Good:
-				c = &schedulingCards.Good
-			case Easy:
-				c = &schedulingCards.Easy
-			}
-			store.cards[i] = c
-			return
+	card := store.cards[cardId]
+	if nil == card {
+		logging.LogWarnf("not found card [id=%s] to review", cardId)
+		return
+	}
+
+	schedulingInfo := store.params.Repeat(*card.c, now)
+	updated := schedulingInfo[fsrs.Rating(rating)].Card
+	card.SetImpl(&updated)
+	store.cards[cardId] = card
+	return
+}
+
+func (store *FSRSStore) Dues() (ret []Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	now := time.Now()
+	for _, card := range store.cards {
+		c := card.Impl().(*fsrs.Card)
+		if now.After(c.Due) {
+			ret = append(ret, card)
 		}
 	}
-	logging.LogWarnf("not found card [id=%d] to review", cardId)
+	return
 }
 
-func (store *FSRSStore) Dues() (ret []int64) {
+func (store *FSRSStore) Load() (err error) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	now := time.Now()
-	for _, c := range store.cards {
-		if now.After(c.Due) {
-			ret = append(ret, c.Id)
-		}
+	store.cards = map[string]*FSRSCard{}
+	p := store.getMsgPackPath()
+	data, err := os.ReadFile(p)
+	if nil != err {
+		logging.LogErrorf("load cards failed: %s", err)
+	}
+	if err = msgpack.Unmarshal(data, &store.cards); nil != err {
+		logging.LogErrorf("load cards failed: %s", err)
+		return
+	}
+	return
+}
+
+func (store *FSRSStore) Save() (err error) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	p := store.getMsgPackPath()
+	data, err := msgpack.Marshal(store.cards)
+	if nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+	if err = gulu.File.WriteFileSafer(p, data, 0644); nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
 	}
 	return
 }

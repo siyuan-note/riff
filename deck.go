@@ -17,17 +17,16 @@
 package riff
 
 import (
-	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/riff/store"
 )
 
 // Deck 描述了一套闪卡包。
 type Deck struct {
-	Name    string          // 唯一名称
-	Desc    string          // 描述
-	Created int64           // 创建时间
-	Updated int64           // 更新时间
-	Cards   map[int64]*Card // 闪卡集合 <cardID, card>
+	Name    string                // 唯一名称
+	Desc    string                // 描述
+	Created int64                 // 创建时间
+	Updated int64                 // 更新时间
+	Cards   map[string]store.Card // 闪卡集合 <cardID, card>
 
 	store store.Store // 底层存储
 }
@@ -38,25 +37,11 @@ func NewDeck(name string, store store.Store) *Deck {
 }
 
 // Review 复习一张闪卡，rating 为复习评分结果。
-func (deck *Deck) Review(cardID int64, rating store.Rating) {
+func (deck *Deck) Review(cardID string, rating store.Rating) {
 	deck.store.Review(cardID, rating)
 }
 
 // Dues 返回所有到期的闪卡。
-func (deck *Deck) Dues() (ret []*Card) {
-	for _, id := range deck.store.Dues() {
-		card, ok := deck.Cards[id]
-		if !ok {
-			logging.LogWarnf("card [%d] not found", id)
-			continue
-		}
-		ret = append(ret, card)
-	}
-	return
-}
-
-// Card 描述了一张闪卡。
-type Card struct {
-	CardID  int64  // 具体算法中的卡片 ID
-	BlockID string // 思源笔记内容块 ID
+func (deck *Deck) Dues() (ret []store.Card) {
+	return deck.store.Dues()
 }

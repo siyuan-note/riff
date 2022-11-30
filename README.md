@@ -4,10 +4,7 @@
 
 [Riff](https://github.com/siyuan-note/riff) is the component of spaced repetition for SiYuan.
 
-
 Status: **In development**
-
-Caused by [https://github.com/open-spaced-repetition/go-fsrs](https://github.com/open-spaced-repetition/go-fsrs) is refactoring, we copy its source code to this project directly.
 
 ## 📄 License
 

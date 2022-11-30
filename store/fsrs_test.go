@@ -21,9 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/siyuan-note/logging"
-	"github.com/siyuan-note/riff/fsrs"
-	"github.com/vmihailenco/msgpack/v5"
+	"github.com/open-spaced-repetition/go-fsrs"
 )
 
 func TestStoreLoadSave(t *testing.T) {
@@ -37,37 +35,33 @@ func TestStoreLoadSave(t *testing.T) {
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start
+	ids := map[string]bool{}
 	for i := 0; i < 10000; i++ {
-		card := fsrs.NewCard()
-		store.cards = append(store.cards, &card)
+		c := fsrs.NewCard()
+		id, blockID := newID(), newID()
+		ids[id] = true
+		card := &FSRSCard{BaseCard: &BaseCard{id, blockID}, c: &c}
+		store.AddCard(card)
 
 		for j := 0; j < 10; j++ {
-			schedulingCards := p.Repeat(&card, repeatTime)
-			card = schedulingCards.Hard
-			repeatTime = card.Due
+			schedulingInfo := p.Repeat(c, repeatTime)
+			c = schedulingInfo[fsrs.Hard].Card
+			repeatTime = c.Due
 		}
 		repeatTime = start
 	}
 	cardsLen := len(store.cards)
 	t.Logf("cards len [%d]", cardsLen)
-
-	data, err := msgpack.Marshal(store.cards)
-	if nil != err {
-		logging.LogErrorf("marshal cards failed: %s", err)
-		return
+	if len(ids) != len(store.cards) {
+		t.Fatalf("cards len [%d] != ids len [%d]", len(store.cards), len(ids))
 	}
 
-	if err = store.Save(data); nil != err {
+	if err := store.Save(); nil != err {
 		t.Fatal(err)
 	}
-	t.Logf("data size [%.2fMB]", float64(len(data))/1024/1024)
+	t.Logf("saved cards [len=%d]", len(store.cards))
 
-	store.cards = nil
-	if data, err = store.Load(); nil != err {
-		t.Fatal(err)
-	}
-
-	if err = msgpack.Unmarshal(data, &store.cards); nil != err {
+	if err := store.Load(); nil != err {
 		t.Fatal(err)
 	}
 	t.Logf("loaded cards len [%d]", len(store.cards))

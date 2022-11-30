@@ -11,6 +11,7 @@ require (
 	github.com/88250/gulu v1.2.3-0.20221117052724-cd06804db798 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/getsentry/sentry-go v0.15.0 // indirect
+	github.com/open-spaced-repetition/go-fsrs v0.1.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
