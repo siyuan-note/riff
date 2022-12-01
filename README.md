@@ -10,7 +10,7 @@ Status: **In development**
 
 ## ✨ Features
 
-* Support spaced repetition algorithm extension
+* Support algorithm extension
     * [FSRS](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler)
     * SM2
 * Support data persistence
