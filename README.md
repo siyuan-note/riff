@@ -11,8 +11,8 @@ Status: **In development**
 ## ✨ Features
 
 * Support algorithm extension
-    * [FSRS](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler)
-    * [SM2](https://www.supermemo.com/en/blog/application-of-a-computer-to-improve-the-results-obtained-in-working-with-the-supermemo-method)
+  * [FSRS](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler)
+  * [SM2](https://www.supermemo.com/en/blog/application-of-a-computer-to-improve-the-results-obtained-in-working-with-the-supermemo-method)
 * Support data persistence
 
 ## 📄 License
