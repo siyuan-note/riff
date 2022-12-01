@@ -1,10 +1,19 @@
 # Riff
 
+[中文](README_zh_CN.md)
+
 ## 💡 Introduction
 
 [Riff](https://github.com/siyuan-note/riff) is the component of spaced repetition for SiYuan.
 
 Status: **In development**
+
+## ✨ Features
+
+* Support spaced repetition algorithm extension
+    * [FSRS](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler)
+    * SM2
+* Support data persistence
 
 ## 📄 License
 
