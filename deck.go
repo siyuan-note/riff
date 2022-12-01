@@ -118,7 +118,7 @@ func (deck *Deck) Save() (err error) {
 	}
 
 	saveDir := deck.store.GetSaveDir()
-	dataPath := filepath.Join(saveDir, deck.Name+".msgpack")
+	dataPath := filepath.Join(saveDir, deck.Name+"-deck.msgpack")
 	data, err := msgpack.Marshal(deck)
 	if nil != err {
 		logging.LogErrorf("save deck failed: %s", err)
