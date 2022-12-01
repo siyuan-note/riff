@@ -12,7 +12,7 @@
 
 * 支持扩展算法
   * [FSRS](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler)
-  * SM2
+  * [SM2](https://www.supermemo.com/en/blog/application-of-a-computer-to-improve-the-results-obtained-in-working-with-the-supermemo-method)
 * 支持数据持久化
 
 ## 📄 授权
