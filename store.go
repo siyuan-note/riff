@@ -41,6 +41,9 @@ type Store interface {
 	// Dues 获取所有到期的闪卡列表。
 	Dues() []Card
 
+	// Name 获取存储名称。
+	Name() string
+
 	// Algo 返回算法名称，如：fsrs。
 	Algo() Algo
 
@@ -56,17 +59,23 @@ type Store interface {
 
 // BaseStore 描述了基础的闪卡存储实现。
 type BaseStore struct {
+	name    string      // 存储名称，应该和卡包名称一致
 	algo    Algo        // 算法名称，如：fsrs
 	saveDir string      // 数据文件夹路径，如：F:\\SiYuan\\data\\storage\\riff\\
 	lock    *sync.Mutex // 操作时需要用到的锁
 }
 
-func NewBaseStore(algo Algo, saveDir string) *BaseStore {
+func NewBaseStore(name string, algo Algo, saveDir string) *BaseStore {
 	return &BaseStore{
+		name:    name,
 		algo:    algo,
 		saveDir: saveDir,
 		lock:    &sync.Mutex{},
 	}
+}
+
+func (store *BaseStore) Name() string {
+	return store.name
 }
 
 func (store *BaseStore) Algo() Algo {
@@ -78,7 +87,7 @@ func (store *BaseStore) GetSaveDir() string {
 }
 
 func (store *BaseStore) getMsgPackPath() string {
-	return filepath.Join(store.saveDir, string(store.algo)+".msgpack")
+	return filepath.Join(store.saveDir, string(store.name)+"-cards.msgpack")
 }
 
 // Rating 描述了闪卡复习的评分。

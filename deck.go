@@ -46,7 +46,7 @@ func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
 	var store Store
 	switch algo {
 	case AlgoFSRS:
-		store = NewFSRSStore(saveDir)
+		store = NewFSRSStore(name, saveDir)
 		err = store.Load()
 	default:
 		err = errors.New("not supported yet")

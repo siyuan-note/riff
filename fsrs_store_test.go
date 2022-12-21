@@ -29,7 +29,7 @@ func TestFSRSStore(t *testing.T) {
 	os.MkdirAll(storePath, 0755)
 	defer os.RemoveAll(storePath)
 
-	store := NewFSRSStore(storePath)
+	store := NewFSRSStore("test-store", storePath)
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start
