@@ -136,12 +136,6 @@ func (deck *Deck) Save() (err error) {
 	}
 
 	saveDir := deck.store.GetSaveDir()
-	if !gulu.File.IsDir(saveDir) {
-		if err = os.MkdirAll(saveDir, 0755); nil != err {
-			return
-		}
-	}
-
 	dataPath := getDeckMsgpackPath(saveDir, deck.ID)
 	data, err := msgpack.Marshal(deck)
 	if nil != err {

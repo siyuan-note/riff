@@ -126,6 +126,13 @@ func (store *FSRSStore) Save() (err error) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	saveDir := store.GetSaveDir()
+	if !gulu.File.IsDir(saveDir) {
+		if err = os.MkdirAll(saveDir, 0755); nil != err {
+			return
+		}
+	}
+
 	p := store.getMsgPackPath()
 	data, err := msgpack.Marshal(store.cards)
 	if nil != err {
