@@ -40,7 +40,7 @@ func TestDeck(t *testing.T) {
 		t.Fatalf("card id [%s] != [%s]", card.ID(), cardID)
 	}
 
-	deck.Review(cardID, Good)
+	deck.Review(blockID, Good)
 	due := card.Impl().(*fsrs.Card).Due.UnixMilli()
 	card = deck.GetCard(blockID)
 	due2 := card.Impl().(*fsrs.Card).Due.UnixMilli()
