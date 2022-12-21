@@ -65,7 +65,7 @@ func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
 		lock:      &sync.Mutex{},
 	}
 
-	dataPath := filepath.Join(saveDir, name+".msgpack")
+	dataPath := getDeckMsgpackPath(saveDir, name, string(algo))
 	if gulu.File.IsExist(dataPath) {
 		var data []byte
 		data, err = os.ReadFile(dataPath)
@@ -118,7 +118,7 @@ func (deck *Deck) Save() (err error) {
 	}
 
 	saveDir := deck.store.GetSaveDir()
-	dataPath := filepath.Join(saveDir, deck.Name+"-deck.msgpack")
+	dataPath := getDeckMsgpackPath(saveDir, deck.Name, string(deck.Algo))
 	data, err := msgpack.Marshal(deck)
 	if nil != err {
 		logging.LogErrorf("save deck failed: %s", err)
@@ -143,4 +143,8 @@ func (deck *Deck) Dues() (ret []Card) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 	return deck.store.Dues()
+}
+
+func getDeckMsgpackPath(saveDir, name, algo string) string {
+	return filepath.Join(saveDir, name+"-"+algo+"-deck.msgpack")
 }

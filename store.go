@@ -87,7 +87,7 @@ func (store *BaseStore) GetSaveDir() string {
 }
 
 func (store *BaseStore) getMsgPackPath() string {
-	return filepath.Join(store.saveDir, string(store.name)+"-cards.msgpack")
+	return filepath.Join(store.saveDir, string(store.name)+"-"+string(store.algo)+"-cards.msgpack")
 }
 
 // Rating 描述了闪卡复习的评分。
