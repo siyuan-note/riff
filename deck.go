@@ -143,9 +143,14 @@ func (deck *Deck) Save() (err error) {
 }
 
 // Review 复习一张闪卡，rating 为复习评分结果。
-func (deck *Deck) Review(cardID string, rating Rating) {
+func (deck *Deck) Review(blockID string, rating Rating) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
+
+	cardID := deck.BlockCard[blockID]
+	if "" == cardID {
+		return
+	}
 	deck.store.Review(cardID, rating)
 }
 
