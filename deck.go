@@ -30,7 +30,8 @@ import (
 
 // Deck 描述了一套闪卡包。
 type Deck struct {
-	Name      string            // 唯一名称
+	ID        string            // ID
+	Name      string            // 名称
 	Algo      Algo              // 间隔重复算法
 	Desc      string            // 描述
 	Created   int64             // 创建时间
@@ -41,31 +42,18 @@ type Deck struct {
 	lock  *sync.Mutex
 }
 
-// LoadDeck 从文件夹 saveDir 路径上加载一套命名为 name 的闪卡包，algo 为间隔重复算法。
-func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
-	var store Store
-	switch algo {
-	case AlgoFSRS:
-		store = NewFSRSStore(name, saveDir)
-		err = store.Load()
-	default:
-		err = errors.New("not supported yet")
-		return
-	}
-	if nil != err {
-		return
-	}
-
+// LoadDeck 从文件夹 saveDir 路径上加载 id 闪卡包。
+func LoadDeck(saveDir, id string) (deck *Deck, err error) {
 	deck = &Deck{
-		Name:      name,
-		Algo:      algo,
+		ID:        id,
+		Name:      id,
+		Algo:      AlgoFSRS,
 		Created:   time.Now().UnixMilli(),
 		BlockCard: map[string]string{},
-		store:     store,
 		lock:      &sync.Mutex{},
 	}
 
-	dataPath := getDeckMsgpackPath(saveDir, name, string(algo))
+	dataPath := getDeckMsgpackPath(saveDir, id)
 	if gulu.File.IsExist(dataPath) {
 		var data []byte
 		data, err = os.ReadFile(dataPath)
@@ -80,6 +68,20 @@ func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
 			return
 		}
 	}
+
+	var store Store
+	switch deck.Algo {
+	case AlgoFSRS:
+		store = NewFSRSStore(deck.ID, saveDir)
+		err = store.Load()
+	default:
+		err = errors.New("not supported yet")
+		return
+	}
+	if nil != err {
+		return
+	}
+	deck.store = store
 	return
 }
 
@@ -129,7 +131,7 @@ func (deck *Deck) Save() (err error) {
 	}
 
 	saveDir := deck.store.GetSaveDir()
-	dataPath := getDeckMsgpackPath(saveDir, deck.Name, string(deck.Algo))
+	dataPath := getDeckMsgpackPath(saveDir, deck.ID)
 	data, err := msgpack.Marshal(deck)
 	if nil != err {
 		logging.LogErrorf("save deck failed: %s", err)
@@ -161,6 +163,6 @@ func (deck *Deck) Dues() (ret []Card) {
 	return deck.store.Dues()
 }
 
-func getDeckMsgpackPath(saveDir, name, algo string) string {
-	return filepath.Join(saveDir, name+"-"+algo+"-deck.msgpack")
+func getDeckMsgpackPath(saveDir, id string) string {
+	return filepath.Join(saveDir, id+".deck")
 }

@@ -33,9 +33,9 @@ type FSRSStore struct {
 	params fsrs.Parameters
 }
 
-func NewFSRSStore(name, saveDir string) *FSRSStore {
+func NewFSRSStore(id, saveDir string) *FSRSStore {
 	return &FSRSStore{
-		BaseStore: NewBaseStore(name, "fsrs", saveDir),
+		BaseStore: NewBaseStore(id, "fsrs", saveDir),
 		cards:     map[string]*FSRSCard{},
 		params:    fsrs.DefaultParam(),
 	}

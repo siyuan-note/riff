@@ -27,10 +27,14 @@ func TestDeck(t *testing.T) {
 	const saveDir = "testdata"
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
-	deckName := "deck0"
-	deck, err := LoadDeck(saveDir, deckName, AlgoFSRS)
+	deckID := newID()
+	deck, err := LoadDeck(saveDir, deckID)
 	if nil != err {
 		t.Fatal(err)
+	}
+	deckName := "deck0"
+	if deck.Name == deckID {
+		deck.Name = deckName
 	}
 
 	cardID, blockID := newID(), newID()
@@ -54,13 +58,13 @@ func TestDeck(t *testing.T) {
 	}
 	deck = nil
 
-	deck, err = LoadDeck(saveDir, deckName, AlgoFSRS)
+	deck, err = LoadDeck(saveDir, deckID)
 	if nil != err {
 		t.Fatal(err)
 	}
 
 	if deckName != deck.Name {
-		t.Fatalf("deck name [%s] != [%s]", deck.Name, deckName)
+		t.Fatalf("deck name [%s] != [%s]", deck.Name, deckID)
 	}
 
 	card = deck.GetCard(blockID)
