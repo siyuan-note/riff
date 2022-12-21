@@ -89,6 +89,11 @@ func LoadDeck(saveDir, id string) (deck *Deck, err error) {
 func (deck *Deck) AddCard(cardID, blockID string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
+
+	if deck.BlockCard[blockID] != "" {
+		return
+	}
+
 	deck.store.AddCard(cardID, blockID)
 	deck.BlockCard[blockID] = cardID
 }
