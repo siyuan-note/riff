@@ -31,7 +31,7 @@ import (
 // Deck 描述了一套闪卡包。
 type Deck struct {
 	Name      string            // 唯一名称
-	Algo      Algo              // 间隔复习算法
+	Algo      Algo              // 间隔重复算法
 	Desc      string            // 描述
 	Created   int64             // 创建时间
 	Updated   int64             // 更新时间
@@ -41,7 +41,7 @@ type Deck struct {
 	lock  *sync.Mutex
 }
 
-// LoadDeck 从文件夹 saveDir 路径上加载一套命名为 name 的闪卡包，store 为底层数据存储和间隔复习算法的实现。
+// LoadDeck 从文件夹 saveDir 路径上加载一套命名为 name 的闪卡包，algo 为间隔重复算法。
 func LoadDeck(saveDir, name string, algo Algo) (deck *Deck, err error) {
 	var store Store
 	switch algo {
