@@ -90,7 +90,7 @@ func (deck *Deck) AddCard(cardID, blockID string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	if deck.BlockCard[blockID] != "" {
+	if "" != deck.BlockCard[blockID] {
 		return
 	}
 
