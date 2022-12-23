@@ -44,11 +44,13 @@ type Deck struct {
 
 // LoadDeck 从文件夹 saveDir 路径上加载 id 闪卡包。
 func LoadDeck(saveDir, id string) (deck *Deck, err error) {
+	created := time.Now().UnixMilli()
 	deck = &Deck{
 		ID:        id,
 		Name:      id,
 		Algo:      AlgoFSRS,
-		Created:   time.Now().UnixMilli(),
+		Created:   created,
+		Updated:   created,
 		BlockCard: map[string]string{},
 		lock:      &sync.Mutex{},
 	}
@@ -96,6 +98,7 @@ func (deck *Deck) AddCard(cardID, blockID string) {
 
 	deck.store.AddCard(cardID, blockID)
 	deck.BlockCard[blockID] = cardID
+	deck.Updated = time.Now().UnixMilli()
 }
 
 // RemoveCard 删除一张闪卡。
@@ -110,6 +113,7 @@ func (deck *Deck) RemoveCard(blockID string) {
 	}
 
 	deck.store.RemoveCard(cardID)
+	deck.Updated = time.Now().UnixMilli()
 }
 
 // GetCard 根据内容块 ID 获取对应的闪卡。
@@ -129,6 +133,7 @@ func (deck *Deck) Save() (err error) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
+	deck.Updated = time.Now().UnixMilli()
 	err = deck.store.Save()
 	if nil != err {
 		logging.LogErrorf("save deck [%s] failed: %s", deck.Name, err)
@@ -159,6 +164,7 @@ func (deck *Deck) Review(blockID string, rating Rating) {
 		return
 	}
 	deck.store.Review(cardID, rating)
+	deck.Updated = time.Now().UnixMilli()
 }
 
 // Dues 返回所有到期的闪卡。
