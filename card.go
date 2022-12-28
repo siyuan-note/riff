@@ -16,6 +16,8 @@
 
 package riff
 
+import "time"
+
 // Card 描述了闪卡。
 type Card interface {
 	// ID 返回闪卡 ID。
@@ -23,6 +25,12 @@ type Card interface {
 
 	// BlockID 返回闪卡关联的内容块 ID。
 	BlockID() string
+
+	// NextDues 返回每种评分对应的下次到期时间。
+	NextDues() map[Rating]time.Time
+
+	// SetNextDues 设置每种评分对应的下次到期时间。
+	SetNextDues(map[Rating]time.Time)
 
 	// Impl 返回具体的闪卡实现。
 	Impl() interface{}
@@ -33,8 +41,17 @@ type Card interface {
 
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	CID string
-	BID string
+	CID   string
+	BID   string
+	NDues map[Rating]time.Time
+}
+
+func (card *BaseCard) NextDues() map[Rating]time.Time {
+	return card.NDues
+}
+
+func (card *BaseCard) SetNextDues(dues map[Rating]time.Time) {
+	card.NDues = dues
 }
 
 func (card *BaseCard) ID() string {

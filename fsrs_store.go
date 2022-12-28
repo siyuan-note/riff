@@ -46,7 +46,7 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	defer store.lock.Unlock()
 
 	c := fsrs.NewCard()
-	card := &FSRSCard{BaseCard: &BaseCard{id, blockID}, C: &c}
+	card := &FSRSCard{BaseCard: &BaseCard{id, blockID, nil}, C: &c}
 	store.cards[id] = card
 	return card
 }
@@ -54,7 +54,6 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 func (store *FSRSStore) GetCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
-
 	return store.cards[id]
 }
 
@@ -94,9 +93,17 @@ func (store *FSRSStore) Dues() (ret []Card) {
 	now := time.Now()
 	for _, card := range store.cards {
 		c := card.Impl().(*fsrs.Card)
-		if now.After(c.Due) {
-			ret = append(ret, card)
+		if now.Before(c.Due) {
+			continue
 		}
+
+		schedulingInfos := store.params.Repeat(*c, now)
+		nextDues := map[Rating]time.Time{}
+		for rating, schedulingInfo := range schedulingInfos {
+			nextDues[Rating(rating)] = schedulingInfo.Card.Due
+		}
+		card.SetNextDues(nextDues)
+		ret = append(ret, card)
 	}
 	return
 }
