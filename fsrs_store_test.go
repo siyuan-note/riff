@@ -17,7 +17,9 @@
 package riff
 
 import (
+	"github.com/88250/gulu"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,8 +36,17 @@ func TestFSRSStore(t *testing.T) {
 	start := time.Now()
 	repeatTime := start
 	ids := map[string]bool{}
-	for i := 0; i < 10000; i++ {
+	var firstCardID, firstBlockID, lastCardID, lastBlockID string
+	max := 10000
+	for i := 0; i < max; i++ {
 		id, blockID := newID(), newID()
+		if 0 == i {
+			firstCardID = id
+			firstBlockID = blockID
+		} else if max-1 == i {
+			lastCardID = id
+			lastBlockID = blockID
+		}
 		store.AddCard(id, blockID)
 		card := store.GetCard(id)
 		c := *card.Impl().(*fsrs.Card)
@@ -67,4 +78,17 @@ func TestFSRSStore(t *testing.T) {
 	if cardsLen != len(store.cards) {
 		t.Fatal("cards len not equal")
 	}
+
+	cards := store.GetCardsByBlockIDs(firstBlockID, lastBlockID)
+	if 2 != len(cards) {
+		t.Fatalf("cards by block ids [len=%d]", len(cards))
+	}
+	cardIDs := []string{cards[0].ID(), cards[1].ID()}
+	if !gulu.Str.Contains(firstCardID, cardIDs) {
+		t.Fatalf("cards by block ids [cardIDs=%v]", cardIDs)
+	}
+	if !gulu.Str.Contains(lastCardID, cardIDs) {
+		t.Fatalf("cards by block ids [cardIDs=%v]", cardIDs)
+	}
+	t.Logf("cards by block ids [len=%d], card ids [%s]", len(cards), strings.Join(cardIDs, ", "))
 }

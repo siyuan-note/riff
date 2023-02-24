@@ -54,12 +54,21 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 func (store *FSRSStore) GetCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
+
 	return store.cards[id]
+}
+
+func (store *FSRSStore) SetCard(card Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	store.cards[card.ID()] = card.(*FSRSCard)
 }
 
 func (store *FSRSStore) RemoveCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
+
 	card := store.cards[id]
 	if nil == card {
 		return nil
@@ -68,10 +77,18 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	return card
 }
 
-func (store *FSRSStore) SetCard(card Card) {
+func (store *FSRSStore) GetCardsByBlockIDs(blockID string, blockIDs ...string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
-	store.cards[card.ID()] = card.(*FSRSCard)
+
+	blockIDs = append(blockIDs, blockID)
+	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
+	for _, card := range store.cards {
+		if gulu.Str.Contains(card.BlockID(), blockIDs) {
+			ret = append(ret, card)
+		}
+	}
+	return
 }
 
 func (store *FSRSStore) Review(cardId string, rating Rating) {
@@ -170,4 +187,8 @@ func (card *FSRSCard) Impl() interface{} {
 
 func (card *FSRSCard) SetImpl(c interface{}) {
 	card.C = c.(*fsrs.Card)
+}
+
+func (card *FSRSCard) IsNil() bool {
+	return nil == card
 }

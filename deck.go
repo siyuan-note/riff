@@ -30,13 +30,12 @@ import (
 
 // Deck 描述了一套闪卡包。
 type Deck struct {
-	ID        string            // ID
-	Name      string            // 名称
-	Algo      Algo              // 间隔重复算法
-	Desc      string            // 描述
-	Created   int64             // 创建时间
-	Updated   int64             // 更新时间
-	BlockCard map[string]string // 内容块 ID 到闪卡 ID 的映射
+	ID      string // ID
+	Name    string // 名称
+	Algo    Algo   // 间隔重复算法
+	Desc    string // 描述
+	Created int64  // 创建时间
+	Updated int64  // 更新时间
 
 	store Store // 底层存储
 	lock  *sync.Mutex
@@ -46,13 +45,12 @@ type Deck struct {
 func LoadDeck(saveDir, id string) (deck *Deck, err error) {
 	created := time.Now().UnixMilli()
 	deck = &Deck{
-		ID:        id,
-		Name:      id,
-		Algo:      AlgoFSRS,
-		Created:   created,
-		Updated:   created,
-		BlockCard: map[string]string{},
-		lock:      &sync.Mutex{},
+		ID:      id,
+		Name:    id,
+		Algo:    AlgoFSRS,
+		Created: created,
+		Updated: created,
+		lock:    &sync.Mutex{},
 	}
 
 	dataPath := getDeckMsgpackPath(saveDir, id)
@@ -92,12 +90,12 @@ func (deck *Deck) AddCard(cardID, blockID string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	if "" != deck.BlockCard[blockID] {
+	card := deck.store.GetCard(cardID)
+	if !card.IsNil() {
 		return
 	}
 
 	deck.store.AddCard(cardID, blockID)
-	deck.BlockCard[blockID] = cardID
 	deck.Updated = time.Now().UnixMilli()
 }
 
@@ -106,11 +104,7 @@ func (deck *Deck) RemoveCard(cardID string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	card := deck.store.RemoveCard(cardID)
-	if nil != card {
-		delete(deck.BlockCard, card.BlockID())
-	}
-
+	deck.store.RemoveCard(cardID)
 	deck.Updated = time.Now().UnixMilli()
 }
 
@@ -127,6 +121,13 @@ func (deck *Deck) GetCard(cardID string) Card {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 	return deck.store.GetCard(cardID)
+}
+
+func (deck *Deck) GetCardsByBlockIDs(blockID string, blockIDs ...string) (ret []Card) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.GetCardsByBlockIDs(blockID, blockIDs...)
 }
 
 // Save 保存闪卡包。

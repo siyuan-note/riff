@@ -32,11 +32,14 @@ type Store interface {
 	// GetCard 获取一张卡片。
 	GetCard(id string) Card
 
+	// SetCard 设置一张卡片。
+	SetCard(card Card)
+
 	// RemoveCard 移除一张卡片。
 	RemoveCard(id string) Card
 
-	// SetCard 设置一张卡片。
-	SetCard(card Card)
+	// GetCardsByBlockIDs 获取指定内容块的所有卡片。
+	GetCardsByBlockIDs(blockID string, blockIDs ...string) []Card
 
 	// Review 闪卡复习。
 	Review(id string, rating Rating)
