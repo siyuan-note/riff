@@ -56,7 +56,11 @@ func (store *FSRSStore) GetCard(id string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	return store.cards[id]
+	ret := store.cards[id]
+	if nil == ret {
+		return nil
+	}
+	return ret
 }
 
 func (store *FSRSStore) SetCard(card Card) {
@@ -200,8 +204,4 @@ func (card *FSRSCard) Impl() interface{} {
 
 func (card *FSRSCard) SetImpl(c interface{}) {
 	card.C = c.(*fsrs.Card)
-}
-
-func (card *FSRSCard) IsNil() bool {
-	return nil == card
 }

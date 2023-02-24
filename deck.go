@@ -91,7 +91,7 @@ func (deck *Deck) AddCard(cardID, blockID string) {
 	defer deck.lock.Unlock()
 
 	card := deck.store.GetCard(cardID)
-	if !card.IsNil() {
+	if nil != card {
 		return
 	}
 

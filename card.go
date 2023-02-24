@@ -37,9 +37,6 @@ type Card interface {
 
 	// SetImpl 设置具体的闪卡实现。
 	SetImpl(c interface{})
-
-	// IsNil 判断闪卡是否为空。
-	IsNil() bool
 }
 
 // BaseCard 描述了基础的闪卡实现。
