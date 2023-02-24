@@ -39,14 +39,14 @@ func TestDeck(t *testing.T) {
 
 	cardID, blockID := newID(), newID()
 	deck.AddCard(cardID, blockID)
-	card := deck.GetCard(blockID)
+	card := deck.GetCard(cardID)
 	if card.ID() != cardID {
 		t.Fatalf("card id [%s] != [%s]", card.ID(), cardID)
 	}
 
 	deck.Review(blockID, Good)
 	due := card.Impl().(*fsrs.Card).Due.UnixMilli()
-	card = deck.GetCard(blockID)
+	card = deck.GetCard(cardID)
 	due2 := card.Impl().(*fsrs.Card).Due.UnixMilli()
 	if due2 != due {
 		t.Fatalf("card due [%v] != [%v]", due2, due)
@@ -67,7 +67,7 @@ func TestDeck(t *testing.T) {
 		t.Fatalf("deck name [%s] != [%s]", deck.Name, deckID)
 	}
 
-	card = deck.GetCard(blockID)
+	card = deck.GetCard(cardID)
 	if card.ID() != cardID {
 		t.Fatalf("card id [%s] != [%s]", card.ID(), cardID)
 	}

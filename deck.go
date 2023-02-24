@@ -102,17 +102,15 @@ func (deck *Deck) AddCard(cardID, blockID string) {
 }
 
 // RemoveCard 删除一张闪卡。
-func (deck *Deck) RemoveCard(blockID string) {
+func (deck *Deck) RemoveCard(cardID string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	cardID := deck.BlockCard[blockID]
-	delete(deck.BlockCard, blockID)
-	if "" == cardID {
-		return
+	card := deck.store.RemoveCard(cardID)
+	if nil != card {
+		delete(deck.BlockCard, card.BlockID())
 	}
 
-	deck.store.RemoveCard(cardID)
 	deck.Updated = time.Now().UnixMilli()
 }
 
@@ -124,15 +122,10 @@ func (deck *Deck) SetCard(card Card) {
 	deck.store.SetCard(card)
 }
 
-// GetCard 根据内容块 ID 获取对应的闪卡。
-func (deck *Deck) GetCard(blockID string) Card {
+// GetCard 根据闪卡 ID 获取对应的闪卡。
+func (deck *Deck) GetCard(cardID string) Card {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
-
-	cardID := deck.BlockCard[blockID]
-	if "" == cardID {
-		return nil
-	}
 	return deck.store.GetCard(cardID)
 }
 
