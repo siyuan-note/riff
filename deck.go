@@ -116,6 +116,14 @@ func (deck *Deck) RemoveCard(blockID string) {
 	deck.Updated = time.Now().UnixMilli()
 }
 
+// SetCard 设置一张闪卡。
+func (deck *Deck) SetCard(card Card) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	deck.store.SetCard(card)
+}
+
 // GetCard 根据内容块 ID 获取对应的闪卡。
 func (deck *Deck) GetCard(blockID string) Card {
 	deck.lock.Lock()

@@ -68,6 +68,12 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	return card
 }
 
+func (store *FSRSStore) SetCard(card Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	store.cards[card.ID()] = card.(*FSRSCard)
+}
+
 func (store *FSRSStore) Review(cardId string, rating Rating) {
 	store.lock.Lock()
 	defer store.lock.Unlock()

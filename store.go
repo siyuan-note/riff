@@ -35,6 +35,9 @@ type Store interface {
 	// RemoveCard 移除一张卡片。
 	RemoveCard(id string) Card
 
+	// SetCard 设置一张卡片。
+	SetCard(card Card)
+
 	// Review 闪卡复习。
 	Review(id string, rating Rating)
 
