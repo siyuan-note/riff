@@ -41,6 +41,9 @@ type Store interface {
 	// GetCardsByBlockIDs 获取指定内容块的所有卡片。
 	GetCardsByBlockIDs(blockID string, blockIDs ...string) []Card
 
+	// GetBlockIDs 获取所有内容块 ID。
+	GetBlockIDs() []string
+
 	// Review 闪卡复习。
 	Review(id string, rating Rating)
 

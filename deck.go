@@ -123,11 +123,19 @@ func (deck *Deck) GetCard(cardID string) Card {
 	return deck.store.GetCard(cardID)
 }
 
+// GetCardsByBlockIDs 获取指定内容块的所有卡片。
 func (deck *Deck) GetCardsByBlockIDs(blockID string, blockIDs ...string) (ret []Card) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
 	return deck.store.GetCardsByBlockIDs(blockID, blockIDs...)
+}
+
+func (deck *Deck) GetBlockIDs() (ret []string) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.GetBlockIDs()
 }
 
 // Save 保存闪卡包。

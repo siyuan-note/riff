@@ -18,6 +18,7 @@ package riff
 
 import (
 	"os"
+	"sort"
 	"time"
 
 	"github.com/88250/gulu"
@@ -88,6 +89,19 @@ func (store *FSRSStore) GetCardsByBlockIDs(blockID string, blockIDs ...string) (
 			ret = append(ret, card)
 		}
 	}
+	return
+}
+
+func (store *FSRSStore) GetBlockIDs() (ret []string) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	ret = []string{}
+	for _, card := range store.cards {
+		ret = append(ret, card.BlockID())
+	}
+	ret = gulu.Str.RemoveDuplicatedElem(ret)
+	sort.Strings(ret)
 	return
 }
 
