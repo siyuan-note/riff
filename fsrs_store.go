@@ -78,11 +78,10 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	return card
 }
 
-func (store *FSRSStore) GetCardsByBlockIDs(blockID string, blockIDs ...string) (ret []Card) {
+func (store *FSRSStore) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	blockIDs = append(blockIDs, blockID)
 	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	for _, card := range store.cards {
 		if gulu.Str.Contains(card.BlockID(), blockIDs) {

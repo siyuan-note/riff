@@ -124,11 +124,11 @@ func (deck *Deck) GetCard(cardID string) Card {
 }
 
 // GetCardsByBlockIDs 获取指定内容块的所有卡片。
-func (deck *Deck) GetCardsByBlockIDs(blockID string, blockIDs ...string) (ret []Card) {
+func (deck *Deck) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	return deck.store.GetCardsByBlockIDs(blockID, blockIDs...)
+	return deck.store.GetCardsByBlockIDs(blockIDs)
 }
 
 func (deck *Deck) GetBlockIDs() (ret []string) {

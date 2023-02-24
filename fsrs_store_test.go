@@ -79,7 +79,7 @@ func TestFSRSStore(t *testing.T) {
 		t.Fatal("cards len not equal")
 	}
 
-	cards := store.GetCardsByBlockIDs(firstBlockID, lastBlockID)
+	cards := store.GetCardsByBlockIDs([]string{firstBlockID, lastBlockID})
 	if 2 != len(cards) {
 		t.Fatalf("cards by block ids [len=%d]", len(cards))
 	}

@@ -39,7 +39,7 @@ type Store interface {
 	RemoveCard(id string) Card
 
 	// GetCardsByBlockIDs 获取指定内容块的所有卡片。
-	GetCardsByBlockIDs(blockID string, blockIDs ...string) []Card
+	GetCardsByBlockIDs(blockIDs []string) []Card
 
 	// GetBlockIDs 获取所有内容块 ID。
 	GetBlockIDs() []string
