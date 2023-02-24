@@ -82,6 +82,18 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	return card
 }
 
+func (store *FSRSStore) GetCardsByBlockID(blockID string) (ret []Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	for _, card := range store.cards {
+		if card.BlockID() == blockID {
+			ret = append(ret, card)
+		}
+	}
+	return
+}
+
 func (store *FSRSStore) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
