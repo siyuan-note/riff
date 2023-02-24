@@ -120,6 +120,13 @@ func (store *FSRSStore) GetBlockIDs() (ret []string) {
 	return
 }
 
+func (store *FSRSStore) CountCards() int {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	return len(store.cards)
+}
+
 func (store *FSRSStore) Review(cardId string, rating Rating) {
 	store.lock.Lock()
 	defer store.lock.Unlock()

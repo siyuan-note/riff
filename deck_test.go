@@ -75,4 +75,9 @@ func TestDeck(t *testing.T) {
 	if due2 != due3 {
 		t.Fatalf("card due [%v] != [%v]", due2, due3)
 	}
+
+	count := deck.CountCards()
+	if 1 != count {
+		t.Fatalf("card count [%d] != [1]", count)
+	}
 }

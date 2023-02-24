@@ -138,11 +138,20 @@ func (deck *Deck) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	return deck.store.GetCardsByBlockIDs(blockIDs)
 }
 
+// GetBlockIDs 获取所有内容块 ID。
 func (deck *Deck) GetBlockIDs() (ret []string) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
 	return deck.store.GetBlockIDs()
+}
+
+// CountCards 获取卡包中的闪卡数量。
+func (deck *Deck) CountCards() int {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.CountCards()
 }
 
 // Save 保存闪卡包。

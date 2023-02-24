@@ -47,6 +47,9 @@ type Store interface {
 	// GetBlockIDs 获取所有内容块 ID。
 	GetBlockIDs() []string
 
+	// CountCards 获取卡包中的闪卡数量。
+	CountCards() int
+
 	// Review 闪卡复习。
 	Review(id string, rating Rating)
 

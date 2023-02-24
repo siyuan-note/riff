@@ -65,6 +65,11 @@ func TestFSRSStore(t *testing.T) {
 		t.Fatalf("cards len [%d] != ids len [%d]", len(store.cards), len(ids))
 	}
 
+	count := store.CountCards()
+	if cardsLen != count {
+		t.Fatalf("cards len [%d] != count [%d]", cardsLen, count)
+	}
+
 	if err := store.Save(); nil != err {
 		t.Fatal(err)
 	}
