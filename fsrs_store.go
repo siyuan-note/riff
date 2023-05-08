@@ -131,6 +131,7 @@ func (store *FSRSStore) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
 }
 
 func (store *FSRSStore) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	store.lock.Lock()
 	defer store.lock.Unlock()
 
 	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
