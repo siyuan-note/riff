@@ -44,6 +44,12 @@ type Store interface {
 	// GetCardsByBlockIDs 获取指定内容块的所有卡片。
 	GetCardsByBlockIDs(blockIDs []string) []Card
 
+	// GetNewCardsByBlockIDs 获取指定内容块的所有新的卡片（制卡后没有进行过复习的卡片）。
+	GetNewCardsByBlockIDs(blockIDs []string) []Card
+
+	// GetDueCardsByBlockIDs 获取指定内容块的所有到期的卡片。
+	GetDueCardsByBlockIDs(blockIDs []string) []Card
+
 	// GetBlockIDs 获取所有内容块 ID。
 	GetBlockIDs() []string
 

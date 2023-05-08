@@ -138,6 +138,20 @@ func (deck *Deck) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	return deck.store.GetCardsByBlockIDs(blockIDs)
 }
 
+func (deck *Deck) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.GetNewCardsByBlockIDs(blockIDs)
+}
+
+func (deck *Deck) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.GetDueCardsByBlockIDs(blockIDs)
+}
+
 // GetBlockIDs 获取所有内容块 ID。
 func (deck *Deck) GetBlockIDs() (ret []string) {
 	deck.lock.Lock()

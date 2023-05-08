@@ -107,6 +107,47 @@ func (store *FSRSStore) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	return
 }
 
+func (store *FSRSStore) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
+	now := time.Now()
+	for _, card := range store.cards {
+		c := card.Impl().(*fsrs.Card)
+		if c.LastReview.IsZero() {
+			continue
+		}
+
+		if now.Before(c.Due) {
+			continue
+		}
+
+		if gulu.Str.Contains(card.BlockID(), blockIDs) {
+			ret = append(ret, card)
+		}
+	}
+	return
+}
+
+func (store *FSRSStore) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	defer store.lock.Unlock()
+
+	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
+	now := time.Now()
+	for _, card := range store.cards {
+		c := card.Impl().(*fsrs.Card)
+		if now.Before(c.Due) {
+			continue
+		}
+
+		if gulu.Str.Contains(card.BlockID(), blockIDs) {
+			ret = append(ret, card)
+		}
+	}
+	return
+}
+
 func (store *FSRSStore) GetBlockIDs() (ret []string) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
