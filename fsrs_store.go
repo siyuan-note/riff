@@ -112,14 +112,9 @@ func (store *FSRSStore) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	defer store.lock.Unlock()
 
 	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	now := time.Now()
 	for _, card := range store.cards {
 		c := card.Impl().(*fsrs.Card)
-		if c.LastReview.IsZero() {
-			continue
-		}
-
-		if now.Before(c.Due) {
+		if !c.LastReview.IsZero() {
 			continue
 		}
 
