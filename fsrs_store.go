@@ -18,6 +18,7 @@ package riff
 
 import (
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -165,7 +166,7 @@ func (store *FSRSStore) CountCards() int {
 	return len(store.cards)
 }
 
-func (store *FSRSStore) Review(cardId string, rating Rating) {
+func (store *FSRSStore) Review(cardId string, rating Rating) (ret *Log) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
@@ -180,6 +181,17 @@ func (store *FSRSStore) Review(cardId string, rating Rating) {
 	updated := schedulingInfo[fsrs.Rating(rating)].Card
 	card.SetImpl(&updated)
 	store.cards[cardId] = card
+
+	reviewLog := schedulingInfo[fsrs.Rating(rating)].ReviewLog
+	ret = &Log{
+		ID:            newID(),
+		CardID:        cardId,
+		Rating:        rating,
+		ScheduledDays: reviewLog.ScheduledDays,
+		ElapsedDays:   reviewLog.ElapsedDays,
+		Reviewed:      reviewLog.Review.Unix(),
+		State:         State(reviewLog.State),
+	}
 	return
 }
 
@@ -245,6 +257,47 @@ func (store *FSRSStore) Save() (err error) {
 	}
 	if err = filelock.WriteFile(p, data); nil != err {
 		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+	return
+}
+
+func (store *FSRSStore) SaveLog(log *Log) (err error) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+
+	saveDir := store.GetSaveDir()
+	saveDir = filepath.Join(saveDir, "logs")
+	if !gulu.File.IsDir(saveDir) {
+		if err = os.MkdirAll(saveDir, 0755); nil != err {
+			return
+		}
+	}
+
+	yyyyMM := time.Now().Format("200601")
+	p := filepath.Join(saveDir, yyyyMM+".log")
+	logs := []*Log{}
+	var data []byte
+	if gulu.File.IsExist(p) {
+		data, err = filelock.ReadFile(p)
+		if nil != err {
+			logging.LogErrorf("load logs failed: %s", err)
+			return
+		}
+
+		if err = msgpack.Unmarshal(data, &logs); nil != err {
+			logging.LogErrorf("unmarshal logs failed: %s", err)
+			return
+		}
+	}
+	logs = append(logs, log)
+
+	if data, err = msgpack.Marshal(logs); nil != err {
+		logging.LogErrorf("marshal logs failed: %s", err)
+		return
+	}
+	if err = filelock.WriteFile(p, data); nil != err {
+		logging.LogErrorf("write logs failed: %s", err)
 		return
 	}
 	return

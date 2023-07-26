@@ -57,7 +57,7 @@ type Store interface {
 	CountCards() int
 
 	// Review 闪卡复习。
-	Review(id string, rating Rating)
+	Review(id string, rating Rating) (ret *Log)
 
 	// Dues 获取所有到期的闪卡列表。
 	Dues() []Card

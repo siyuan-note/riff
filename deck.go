@@ -195,12 +195,13 @@ func (deck *Deck) Save() (err error) {
 }
 
 // Review 复习一张闪卡，rating 为复习评分结果。
-func (deck *Deck) Review(cardID string, rating Rating) {
+func (deck *Deck) Review(cardID string, rating Rating) (ret *Log) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
-	deck.store.Review(cardID, rating)
+	ret = deck.store.Review(cardID, rating)
 	deck.Updated = time.Now().UnixMilli()
+	return
 }
 
 // Dues 返回所有到期的闪卡。
