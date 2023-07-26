@@ -275,7 +275,7 @@ func (store *FSRSStore) SaveLog(log *Log) (err error) {
 	}
 
 	yyyyMM := time.Now().Format("200601")
-	p := filepath.Join(saveDir, yyyyMM+".log")
+	p := filepath.Join(saveDir, yyyyMM+".msgpack")
 	logs := []*Log{}
 	var data []byte
 	if gulu.File.IsExist(p) {
