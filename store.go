@@ -129,6 +129,16 @@ const (
 	AlgoSM2  Algo = "sm2"
 )
 
+// State 描述了闪卡的状态。
+type State int8
+
+const (
+	New State = iota
+	Learning
+	Review
+	Relearning
+)
+
 func newID() string {
 	now := time.Now()
 	return now.Format("20060102150405") + "-" + randStr(7)
