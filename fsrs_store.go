@@ -23,6 +23,7 @@ import (
 
 	"github.com/88250/gulu"
 	"github.com/open-spaced-repetition/go-fsrs"
+	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -214,7 +215,7 @@ func (store *FSRSStore) Load() (err error) {
 		return
 	}
 
-	data, err := os.ReadFile(p)
+	data, err := filelock.ReadFile(p)
 	if nil != err {
 		logging.LogErrorf("load cards failed: %s", err)
 	}
@@ -242,7 +243,7 @@ func (store *FSRSStore) Save() (err error) {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
 	}
-	if err = gulu.File.WriteFileSafer(p, data, 0644); nil != err {
+	if err = filelock.WriteFile(p, data); nil != err {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
 	}

@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/getsentry/sentry-go v0.22.0 // indirect
+	github.com/siyuan-note/filelock v0.0.0-20230615140405-d05a21d49524 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect

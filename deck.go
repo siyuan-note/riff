@@ -18,12 +18,12 @@ package riff
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/88250/gulu"
+	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -56,7 +56,7 @@ func LoadDeck(saveDir, id string) (deck *Deck, err error) {
 	dataPath := getDeckMsgpackPath(saveDir, id)
 	if gulu.File.IsExist(dataPath) {
 		var data []byte
-		data, err = os.ReadFile(dataPath)
+		data, err = filelock.ReadFile(dataPath)
 		if nil != err {
 			logging.LogErrorf("load deck [%s] failed: %s", deck.Name, err)
 			return
@@ -187,7 +187,7 @@ func (deck *Deck) Save() (err error) {
 		logging.LogErrorf("save deck failed: %s", err)
 		return
 	}
-	if err = gulu.File.WriteFileSafer(dataPath, data, 0644); nil != err {
+	if err = filelock.WriteFile(dataPath, data); nil != err {
 		logging.LogErrorf("save deck failed: %s", err)
 		return
 	}
