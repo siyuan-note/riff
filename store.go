@@ -74,6 +74,9 @@ type Store interface {
 	// Save 将全部闪卡从内存保存到持久化存储中。
 	Save() error
 
+	// SaveLog 保存复习日志。
+	SaveLog(log *Log) error
+
 	// GetSaveDir 获取数据文件夹路径。
 	GetSaveDir() string
 }

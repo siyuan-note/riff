@@ -194,6 +194,14 @@ func (deck *Deck) Save() (err error) {
 	return
 }
 
+// SaveLog 保存闪卡包的复习日志。
+func (deck *Deck) SaveLog(log *Log) (err error) {
+	deck.lock.Lock()
+	defer deck.lock.Unlock()
+
+	return deck.store.SaveLog(log)
+}
+
 // Review 复习一张闪卡，rating 为复习评分结果。
 func (deck *Deck) Review(cardID string, rating Rating) (ret *Log) {
 	deck.lock.Lock()
