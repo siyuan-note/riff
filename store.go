@@ -118,10 +118,10 @@ func (store *BaseStore) getMsgPackPath() string {
 type Rating int8
 
 const (
-	Again Rating = iota // 完全不会，必须再复习一遍
-	Hard                // 有点难
-	Good                // 一般
-	Easy                // 很容易
+	Again Rating = iota + 1 // 完全不会，必须再复习一遍
+	Hard                    // 有点难
+	Good                    // 一般
+	Easy                    // 很容易
 )
 
 // Algo 描述了闪卡复习算法的名称。
