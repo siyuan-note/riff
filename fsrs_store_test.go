@@ -26,12 +26,18 @@ import (
 	"github.com/open-spaced-repetition/go-fsrs"
 )
 
+const (
+	requestRetention = 0.9
+	maximumInterval  = 36500
+	weights          = "0.40, 0.60, 2.40, 5.80, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61"
+)
+
 func TestFSRSStore(t *testing.T) {
 	const storePath = "testdata"
 	os.MkdirAll(storePath, 0755)
 	defer os.RemoveAll(storePath)
 
-	store := NewFSRSStore("test-store", storePath)
+	store := NewFSRSStore("test-store", storePath, requestRetention, maximumInterval, weights)
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start

@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/88250/gulu"
@@ -36,11 +38,20 @@ type FSRSStore struct {
 	params fsrs.Parameters
 }
 
-func NewFSRSStore(id, saveDir string) *FSRSStore {
+func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval int, weights string) *FSRSStore {
+	params := fsrs.DefaultParam()
+	params.RequestRetention = requestRetention
+	params.MaximumInterval = float64(maximumInterval)
+	params.W = [17]float64{}
+	for i, w := range strings.Split(weights, ",") {
+		w = strings.TrimSpace(w)
+		params.W[i], _ = strconv.ParseFloat(w, 64)
+	}
+
 	return &FSRSStore{
 		BaseStore: NewBaseStore(id, "fsrs", saveDir),
 		cards:     map[string]*FSRSCard{},
-		params:    fsrs.DefaultParam(),
+		params:    params,
 	}
 }
 

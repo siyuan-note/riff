@@ -28,7 +28,7 @@ func TestDeck(t *testing.T) {
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
 	deckID := newID()
-	deck, err := LoadDeck(saveDir, deckID)
+	deck, err := LoadDeck(saveDir, deckID, requestRetention, maximumInterval, weights)
 	if nil != err {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestDeck(t *testing.T) {
 	}
 	deck = nil
 
-	deck, err = LoadDeck(saveDir, deckID)
+	deck, err = LoadDeck(saveDir, deckID, requestRetention, maximumInterval, weights)
 	if nil != err {
 		t.Fatal(err)
 	}

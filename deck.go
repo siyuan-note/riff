@@ -42,7 +42,7 @@ type Deck struct {
 }
 
 // LoadDeck 从文件夹 saveDir 路径上加载 id 闪卡包。
-func LoadDeck(saveDir, id string) (deck *Deck, err error) {
+func LoadDeck(saveDir, id string, requestRetention float64, maximumInterval int, weights string) (deck *Deck, err error) {
 	created := time.Now().UnixMilli()
 	deck = &Deck{
 		ID:      id,
@@ -72,7 +72,7 @@ func LoadDeck(saveDir, id string) (deck *Deck, err error) {
 	var store Store
 	switch deck.Algo {
 	case AlgoFSRS:
-		store = NewFSRSStore(deck.ID, saveDir)
+		store = NewFSRSStore(deck.ID, saveDir, requestRetention, maximumInterval, weights)
 		err = store.Load()
 	default:
 		err = errors.New("not supported yet")
