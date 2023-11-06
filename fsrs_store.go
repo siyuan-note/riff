@@ -234,7 +234,7 @@ func (store *FSRSStore) Load() (err error) {
 
 	store.cards = map[string]*FSRSCard{}
 	p := store.getMsgPackPath()
-	if !gulu.File.IsExist(p) {
+	if !filelock.IsExist(p) {
 		return
 	}
 
@@ -289,7 +289,7 @@ func (store *FSRSStore) SaveLog(log *Log) (err error) {
 	p := filepath.Join(saveDir, yyyyMM+".msgpack")
 	logs := []*Log{}
 	var data []byte
-	if gulu.File.IsExist(p) {
+	if filelock.IsExist(p) {
 		data, err = filelock.ReadFile(p)
 		if nil != err {
 			logging.LogErrorf("load logs failed: %s", err)

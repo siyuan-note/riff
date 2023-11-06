@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/88250/gulu"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/vmihailenco/msgpack/v5"
@@ -54,7 +53,7 @@ func LoadDeck(saveDir, id string, requestRetention float64, maximumInterval int,
 	}
 
 	dataPath := getDeckMsgpackPath(saveDir, id)
-	if gulu.File.IsExist(dataPath) {
+	if filelock.IsExist(dataPath) {
 		var data []byte
 		data, err = filelock.ReadFile(dataPath)
 		if nil != err {
