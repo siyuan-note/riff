@@ -60,7 +60,7 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	defer store.lock.Unlock()
 
 	c := fsrs.NewCard()
-	card := &FSRSCard{BaseCard: &BaseCard{id, blockID, nil}, C: &c}
+	card := &FSRSCard{BaseCard: &BaseCard{id, blockID, State(c.State), nil}, C: &c}
 	store.cards[id] = card
 	return card
 }
@@ -191,6 +191,7 @@ func (store *FSRSStore) Review(cardId string, rating Rating) (ret *Log) {
 	schedulingInfo := store.params.Repeat(*card.C, now)
 	updated := schedulingInfo[fsrs.Rating(rating)].Card
 	card.SetImpl(&updated)
+	card.S = State(updated.State)
 	store.cards[cardId] = card
 
 	reviewLog := schedulingInfo[fsrs.Rating(rating)].ReviewLog

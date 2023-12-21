@@ -32,6 +32,9 @@ type Card interface {
 	// SetNextDues 设置每种评分对应的下次到期时间。
 	SetNextDues(map[Rating]time.Time)
 
+	// GetState 返回闪卡状态。
+	GetState() State
+
 	// Impl 返回具体的闪卡实现。
 	Impl() interface{}
 
@@ -43,6 +46,7 @@ type Card interface {
 type BaseCard struct {
 	CID   string
 	BID   string
+	S     State
 	NDues map[Rating]time.Time
 }
 
@@ -60,4 +64,8 @@ func (card *BaseCard) ID() string {
 
 func (card *BaseCard) BlockID() string {
 	return card.BID
+}
+
+func (card *BaseCard) GetState() State {
+	return card.S
 }
