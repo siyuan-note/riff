@@ -3,10 +3,10 @@ module github.com/siyuan-note/riff
 go 1.19
 
 require (
-	github.com/88250/gulu v1.2.3-0.20230501031728-4d62370997cd
+	github.com/88250/gulu v1.2.3-0.20231209020950-b7b6994e395c
 	github.com/open-spaced-repetition/go-fsrs v1.1.0
-	github.com/siyuan-note/filelock v0.0.0-20231107122348-6ed75b0b525a
-	github.com/siyuan-note/logging v0.0.0-20231030034701-8265764f00ff
+	github.com/siyuan-note/filelock v0.0.0-20231211015131-3b3dfabdce9c
+	github.com/siyuan-note/logging v0.0.0-20231208035918-61f884c854f0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
 

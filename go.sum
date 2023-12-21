@@ -1,5 +1,5 @@
-github.com/88250/gulu v1.2.3-0.20230501031728-4d62370997cd h1:PgbmnoTqfVbYyhUljovnAz6l/oWPlbM1d5yrkVDHO1w=
-github.com/88250/gulu v1.2.3-0.20230501031728-4d62370997cd/go.mod h1:pTWnjt+6qUqNnP9xltswsJxgCBVu3C7eW09u48LWX0k=
+github.com/88250/gulu v1.2.3-0.20231209020950-b7b6994e395c h1:Fas3hxqP33xA9KKDV50jUmppiiOukk5bdV00Hk5VSSk=
+github.com/88250/gulu v1.2.3-0.20231209020950-b7b6994e395c/go.mod h1:pTWnjt+6qUqNnP9xltswsJxgCBVu3C7eW09u48LWX0k=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/getsentry/sentry-go v0.25.0 h1:q6Eo+hS+yoJlTO3uu/azhQadsD8V+jQn2D8VvX1eOyI=
 github.com/getsentry/sentry-go v0.25.0/go.mod h1:lc76E2QywIyW8WuBnwl8Lc4bkmQH4+w1gwTf25trprY=
@@ -10,10 +10,10 @@ github.com/open-spaced-repetition/go-fsrs v1.1.0/go.mod h1:WpbNs4TTKZChOHFO+ME0B
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
-github.com/siyuan-note/filelock v0.0.0-20231107122348-6ed75b0b525a h1:fNWhSpB+e0zOc76isiXAhjiQRaHocitRhWthCaCYTJA=
-github.com/siyuan-note/filelock v0.0.0-20231107122348-6ed75b0b525a/go.mod h1:HjtfP1NLDw53BRSeAPJgZDIGqyxi4bANYn1IhgDCQUY=
-github.com/siyuan-note/logging v0.0.0-20231030034701-8265764f00ff h1:5GcxrTOJTsusXOLhg4GuHWbEa4M5gu+CNfL0giwNjDM=
-github.com/siyuan-note/logging v0.0.0-20231030034701-8265764f00ff/go.mod h1:6mRFtAAvYPn3cDzqvyv+t8BVPGqpONDMMb5ywOhY1D4=
+github.com/siyuan-note/filelock v0.0.0-20231211015131-3b3dfabdce9c h1:ljGWxKi4zT+cl7NkuNahTGOko9nw+Ed0xqsKgZiExyg=
+github.com/siyuan-note/filelock v0.0.0-20231211015131-3b3dfabdce9c/go.mod h1:++qrlYXSLss5AtNrHm3MNtDAQSI2gT8m3m15zLPjWJg=
+github.com/siyuan-note/logging v0.0.0-20231208035918-61f884c854f0 h1:+XjUr9UMXsczdO2bGA72p/k9wa2ShPb8ybi7CDBJ7HQ=
+github.com/siyuan-note/logging v0.0.0-20231208035918-61f884c854f0/go.mod h1:6mRFtAAvYPn3cDzqvyv+t8BVPGqpONDMMb5ywOhY1D4=
 github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
 github.com/vmihailenco/msgpack/v5 v5.4.1 h1:cQriyiUvjTwOHg8QZaPihLWeRAAVoCpE00IUPn0Bjt8=
 github.com/vmihailenco/msgpack/v5 v5.4.1/go.mod h1:GaZTsDaehaPpQVyxrf5mtQlH+pc21PIudVV/E3rRQok=
