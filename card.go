@@ -46,7 +46,6 @@ type Card interface {
 type BaseCard struct {
 	CID   string
 	BID   string
-	S     State
 	NDues map[Rating]time.Time
 }
 
@@ -64,8 +63,4 @@ func (card *BaseCard) ID() string {
 
 func (card *BaseCard) BlockID() string {
 	return card.BID
-}
-
-func (card *BaseCard) GetState() State {
-	return card.S
 }
