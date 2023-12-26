@@ -330,3 +330,17 @@ func (card *FSRSCard) SetImpl(c interface{}) {
 func (card *FSRSCard) GetState() State {
 	return State(card.C.State)
 }
+
+func (card *FSRSCard) Clone() Card {
+	data, err := gulu.JSON.MarshalJSON(card)
+	if nil != err {
+		logging.LogErrorf("marshal card failed: %s", err)
+		return nil
+	}
+	ret := &FSRSCard{}
+	if err = gulu.JSON.UnmarshalJSON(data, ret); nil != err {
+		logging.LogErrorf("unmarshal card failed: %s", err)
+		return nil
+	}
+	return ret
+}

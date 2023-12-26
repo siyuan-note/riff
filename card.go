@@ -35,6 +35,9 @@ type Card interface {
 	// GetState 返回闪卡状态。
 	GetState() State
 
+	// Clone 返回闪卡的克隆。
+	Clone() Card
+
 	// Impl 返回具体的闪卡实现。
 	Impl() interface{}
 
