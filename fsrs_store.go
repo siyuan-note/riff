@@ -344,3 +344,7 @@ func (card *FSRSCard) Clone() Card {
 	}
 	return ret
 }
+
+func (card *FSRSCard) SetDue(due time.Time) {
+	card.C.Due = due
+}

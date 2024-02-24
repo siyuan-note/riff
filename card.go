@@ -32,6 +32,9 @@ type Card interface {
 	// SetNextDues 设置每种评分对应的下次到期时间。
 	SetNextDues(map[Rating]time.Time)
 
+	// SetDue 设置到期时间。
+	SetDue(time.Time)
+
 	// GetState 返回闪卡状态。
 	GetState() State
 
