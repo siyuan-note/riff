@@ -35,8 +35,17 @@ type Card interface {
 	// SetDue 设置到期时间。
 	SetDue(time.Time)
 
+	// GetLapses 返回闪卡的遗忘次数。
+	GetLapses() int
+
+	// GetReps 返回闪卡的复习次数。
+	GetReps() int
+
 	// GetState 返回闪卡状态。
 	GetState() State
+
+	// GetLastReview 返回闪卡的最后复习时间。
+	GetLastReview() time.Time
 
 	// Clone 返回闪卡的克隆。
 	Clone() Card

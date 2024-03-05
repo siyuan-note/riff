@@ -327,8 +327,20 @@ func (card *FSRSCard) SetImpl(c interface{}) {
 	card.C = c.(*fsrs.Card)
 }
 
+func (card *FSRSCard) GetLapses() int {
+	return int(card.C.Lapses)
+}
+
+func (card *FSRSCard) GetReps() int {
+	return int(card.C.Reps)
+}
+
 func (card *FSRSCard) GetState() State {
 	return State(card.C.State)
+}
+
+func (card *FSRSCard) GetLastReview() time.Time {
+	return card.C.LastReview
 }
 
 func (card *FSRSCard) Clone() Card {
