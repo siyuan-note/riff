@@ -24,7 +24,7 @@ require (
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/onsi/ginkgo/v2 v2.16.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
-	github.com/quic-go/quic-go v0.41.0 // indirect
+	github.com/quic-go/quic-go v0.42.0 // indirect
 	github.com/refraction-networking/utls v1.6.3 // indirect
 	github.com/siyuan-note/httpclient v0.0.0-20240312073515-af29be1cfb4e // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
