@@ -26,6 +26,12 @@ type Card interface {
 	// BlockID 返回闪卡关联的内容块 ID。
 	BlockID() string
 
+	// CardSourceID 返回关联的cardsource ID，对于默认卡直接返回自身闪卡ID
+	CardSourceID() string
+
+	// CardType 返回闪卡的类型，默认的卡片直接返回default
+	CardType() string
+
 	// NextDues 返回每种评分对应的下次到期时间。
 	NextDues() map[Rating]time.Time
 
@@ -78,4 +84,12 @@ func (card *BaseCard) ID() string {
 
 func (card *BaseCard) BlockID() string {
 	return card.BID
+}
+
+func (card *BaseCard) CardSourceID() string {
+	return card.BID
+}
+
+func (card *BaseCard) CardType() string {
+	return "default"
 }
