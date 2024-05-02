@@ -34,8 +34,9 @@ import (
 type FSRSStore struct {
 	*BaseStore
 
-	cards  map[string]*FSRSCard
-	params fsrs.Parameters
+	cardSources map[string]CardSource
+	cards       map[string]*FSRSCard
+	params      fsrs.Parameters
 }
 
 func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval int, weights string) *FSRSStore {
@@ -49,9 +50,10 @@ func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval 
 	}
 
 	return &FSRSStore{
-		BaseStore: NewBaseStore(id, "fsrs", saveDir),
-		cards:     map[string]*FSRSCard{},
-		params:    params,
+		BaseStore:   NewBaseStore(id, "fsrs", saveDir),
+		cardSources: make(map[string]CardSource),
+		cards:       map[string]*FSRSCard{},
+		params:      params,
 	}
 }
 
@@ -59,9 +61,17 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	cardSourceID := newID()
 	c := fsrs.NewCard()
-	card := &FSRSCard{BaseCard: &BaseCard{id, blockID, nil}, C: &c}
+	card := &FSRSCard{BaseCard: &BaseCard{CID: id}, C: &c}
 	store.cards[id] = card
+
+	cardSource := &BaseCardSource{
+		SID:     cardSourceID,
+		CType:   builtInCardType,
+		CIDMap:  map[string]string{"basic_card": id},
+		Context: map[string]string{"blockIDs": blockID}}
+	store.cardSources[cardSourceID] = cardSource
 	return card
 }
 
@@ -91,18 +101,47 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	if nil == card {
 		return nil
 	}
+	cardSourceID := card.CardSourceID()
+	cardSource := store.cardSources[cardSourceID]
+	if nil != cardSource {
+		cardSource.RemoveCardID(id)
+	}
 	delete(store.cards, id)
 	return card
 }
 
+func getCardSourceRelatedBlockID(cardSource CardSource) (ret []string) {
+	blockIDsStr := cardSource.GetContext()["blockIDs"]
+	blockIDsStr = strings.Replace(blockIDsStr, " ", "", -1)
+	ret = strings.Split(blockIDsStr, ",")
+	ret = gulu.Str.RemoveDuplicatedElem(ret)
+	return
+}
+
+// 根据 blockID 从 cardSource Context["blockIDs"] 里查询，返回一个不重复的CardIDs
+// 这个操作没有加锁，调用者必须自己加锁
+func (store *FSRSStore) getCardIDsByBlockID(blockID string) (ret []string) {
+	for _, cardSource := range store.cardSources {
+		cardSourceBlockIDs := getCardSourceRelatedBlockID(cardSource)
+		if gulu.Str.Contains(blockID, cardSourceBlockIDs) {
+			for _, cardID := range cardSource.GetCardIDs() {
+				if _, ok := store.cards[cardID]; ok {
+					ret = append(ret, cardID)
+				}
+			}
+		}
+	}
+	ret = gulu.Str.RemoveDuplicatedElem(ret)
+
+	return
+}
 func (store *FSRSStore) GetCardsByBlockID(blockID string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	for _, card := range store.cards {
-		if card.BlockID() == blockID {
-			ret = append(ret, card)
-		}
+	cardIDs := store.getCardIDsByBlockID(blockID)
+	for _, cardID := range cardIDs {
+		ret = append(ret, store.cards[cardID])
 	}
 	return
 }
@@ -111,11 +150,17 @@ func (store *FSRSStore) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	var cardIDs []string
+
 	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	for _, card := range store.cards {
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+
+	for _, blockID := range blockIDs {
+		cardIDs = append(cardIDs, store.getCardIDsByBlockID(blockID)...)
+	}
+
+	cardIDs = gulu.Str.RemoveDuplicatedElem(cardIDs)
+	for _, cardID := range cardIDs {
+		ret = append(ret, store.cards[cardID])
 	}
 	return
 }
@@ -124,16 +169,13 @@ func (store *FSRSStore) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	for _, card := range store.cards {
+	cards := store.GetCardsByBlockIDs(blockIDs)
+	for _, card := range cards {
 		c := card.Impl().(*fsrs.Card)
 		if !c.LastReview.IsZero() {
 			continue
 		}
-
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+		ret = append(ret, card)
 	}
 	return
 }
@@ -142,17 +184,15 @@ func (store *FSRSStore) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	now := time.Now()
-	for _, card := range store.cards {
+
+	cards := store.GetCardsByBlockIDs(blockIDs)
+	for _, card := range cards {
 		c := card.Impl().(*fsrs.Card)
 		if now.Before(c.Due) {
 			continue
 		}
-
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+		ret = append(ret, card)
 	}
 	return
 }
@@ -162,8 +202,9 @@ func (store *FSRSStore) GetBlockIDs() (ret []string) {
 	defer store.lock.Unlock()
 
 	ret = []string{}
-	for _, card := range store.cards {
-		ret = append(ret, card.BlockID())
+	for _, cardSource := range store.cardSources {
+		blockIDs := getCardSourceRelatedBlockID(cardSource)
+		ret = append(ret, blockIDs...)
 	}
 	ret = gulu.Str.RemoveDuplicatedElem(ret)
 	sort.Strings(ret)
@@ -312,6 +353,22 @@ func (store *FSRSStore) SaveLog(log *Log) (err error) {
 		return
 	}
 	return
+}
+
+func (store *FSRSStore) AddCardSource(id string, CType CardType, cardIDMap map[string]string) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	cardSource := &BaseCardSource{
+		SID:    id,
+		CType:  CType,
+		CIDMap: cardIDMap}
+	for _, cardID := range cardIDMap {
+		c := fsrs.NewCard()
+		card := &FSRSCard{BaseCard: &BaseCard{CID: cardID}, C: &c}
+		store.cards[id] = card
+	}
+	store.cardSources[id] = cardSource
+	return cardSource
 }
 
 type FSRSCard struct {
