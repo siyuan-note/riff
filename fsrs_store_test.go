@@ -17,11 +17,12 @@
 package riff
 
 import (
-	"github.com/88250/gulu"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/88250/gulu"
 
 	"github.com/open-spaced-repetition/go-fsrs"
 )
@@ -38,6 +39,9 @@ func TestFSRSStore(t *testing.T) {
 	defer os.RemoveAll(storePath)
 
 	store := NewFSRSStore("test-store", storePath, requestRetention, maximumInterval, weights)
+	// 判断是否实现全部必须接口
+	// var _ CardSourceStore = store
+	var _ Store = store
 	p := fsrs.DefaultParam()
 	start := time.Now()
 	repeatTime := start
