@@ -43,7 +43,9 @@ type BaseCardSource struct {
 }
 
 const (
-	builtInCardType CardType = "siyuan_busic_card"
+	builtInCardType     CardType = "siyuan_busic_card"
+	builtInCardIDMapKey string   = "basic_card"
+	builtInContext      string   = "blockIDs"
 )
 
 func (source *BaseCardSource) SourceID() string {

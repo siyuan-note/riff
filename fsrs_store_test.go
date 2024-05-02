@@ -85,6 +85,7 @@ func TestFSRSStore(t *testing.T) {
 	}
 	t.Logf("saved cards [len=%d]", len(store.cards))
 
+	store = NewFSRSStore("test-store", storePath, requestRetention, maximumInterval, weights)
 	if err := store.Load(); nil != err {
 		t.Fatal(err)
 	}

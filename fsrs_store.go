@@ -34,7 +34,7 @@ import (
 type FSRSStore struct {
 	*BaseStore
 
-	cardSources map[string]CardSource
+	cardSources map[string]*BaseCardSource
 	cards       map[string]*FSRSCard
 	params      fsrs.Parameters
 }
@@ -51,7 +51,7 @@ func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval 
 
 	return &FSRSStore{
 		BaseStore:   NewBaseStore(id, "fsrs", saveDir),
-		cardSources: make(map[string]CardSource),
+		cardSources: map[string]*BaseCardSource{},
 		cards:       map[string]*FSRSCard{},
 		params:      params,
 	}
@@ -69,8 +69,8 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	cardSource := &BaseCardSource{
 		SID:     cardSourceID,
 		CType:   builtInCardType,
-		CIDMap:  map[string]string{"basic_card": id},
-		Context: map[string]string{"blockIDs": blockID}}
+		CIDMap:  map[string]string{builtInCardIDMapKey: id},
+		Context: map[string]string{builtInContext: blockID}}
 	store.cardSources[cardSourceID] = cardSource
 	return card
 }
@@ -111,7 +111,7 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 }
 
 func getCardSourceRelatedBlockID(cardSource CardSource) (ret []string) {
-	blockIDsStr := cardSource.GetContext()["blockIDs"]
+	blockIDsStr := cardSource.GetContext()[builtInContext]
 	blockIDsStr = strings.Replace(blockIDsStr, " ", "", -1)
 	ret = strings.Split(blockIDsStr, ",")
 	ret = gulu.Str.RemoveDuplicatedElem(ret)
@@ -287,6 +287,19 @@ func (store *FSRSStore) Load() (err error) {
 		logging.LogErrorf("load cards failed: %s", err)
 		return
 	}
+
+	p = store.getCardSourcesMsgPackPath()
+	if !filelock.IsExist(p) {
+		return
+	}
+	data, err = filelock.ReadFile(p)
+	if nil != err {
+		logging.LogErrorf("load cardsources failed: %s", err)
+	}
+	if err = msgpack.Unmarshal(data, &store.cardSources); nil != err {
+		logging.LogErrorf("load cardsources failed: %s", err)
+		return
+	}
 	return
 }
 
@@ -303,6 +316,17 @@ func (store *FSRSStore) Save() (err error) {
 
 	p := store.getMsgPackPath()
 	data, err := msgpack.Marshal(store.cards)
+	if nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+	if err = filelock.WriteFile(p, data); nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+
+	p = store.getCardSourcesMsgPackPath()
+	data, err = msgpack.Marshal(store.cardSources)
 	if nil != err {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
