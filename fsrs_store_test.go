@@ -33,7 +33,17 @@ const (
 	weights          = "0.40, 0.60, 2.40, 5.80, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61"
 )
 
+type BaseStruct struct {
+	CID string
+}
+
 func TestFSRSStore(t *testing.T) {
+
+	newCard := BaseStruct{
+		CID: "1111",
+	}
+	t.Log(newCard.CID)
+
 	const storePath = "testdata"
 	os.MkdirAll(storePath, 0755)
 	defer os.RemoveAll(storePath)
@@ -46,13 +56,15 @@ func TestFSRSStore(t *testing.T) {
 	start := time.Now()
 	repeatTime := start
 	ids := map[string]bool{}
-	var firstCardID, firstBlockID, lastCardID, lastBlockID string
-	max := 10000
+	var firstCardID, secondCardID, secondCardSourceID, firstBlockID, lastCardID, lastBlockID string
+	max := 10
 	for i := 0; i < max; i++ {
 		id, blockID := newID(), newID()
 		if 0 == i {
 			firstCardID = id
 			firstBlockID = blockID
+		} else if 1 == i {
+			secondCardID = id
 		} else if max-1 == i {
 			lastCardID = id
 			lastBlockID = blockID
@@ -68,6 +80,19 @@ func TestFSRSStore(t *testing.T) {
 			repeatTime = c.Due
 		}
 		repeatTime = start
+	}
+	secondCard := store.cards[secondCardID]
+	secondCardSourceID = secondCard.CardSourceID()
+	secondCardSource, ok := store.cardSources[secondCardSourceID]
+	if !ok {
+		t.Fatal("CardSource no add successful")
+	}
+
+	if secondCardSource.CIDMap == nil {
+		t.Fatal("CardSource CIDMap field init fail")
+	}
+	if !gulu.Str.Contains(secondCardID, secondCardSource.GetCardIDs()) {
+		t.Fatal("add card no successful add to cardsource")
 	}
 	cardsLen := len(store.cards)
 	t.Logf("cards len [%d]", cardsLen)
@@ -95,6 +120,18 @@ func TestFSRSStore(t *testing.T) {
 		t.Fatal("cards len not equal")
 	}
 
+	secondCardSourceID = store.cards[secondCardID].CardSourceID()
+
+	store.RemoveCard(secondCardID)
+	if cardsLen-1 != len(store.cards) {
+		t.Fatalf("remove cards len [%d] != [%d]", len(store.cards), cardsLen-1)
+	}
+	if cardsLen-1 != len(store.cardSources) {
+		t.Fatalf("remove cardSources len [%d] != [%d]", len(store.cardSources), cardsLen-1)
+	}
+	if _, ok := store.cardSources[secondCardSourceID]; ok {
+		t.Fatal("remove card related cardSources fail")
+	}
 	cards := store.GetCardsByBlockID(firstBlockID)
 	if 1 != len(cards) {
 		t.Fatalf("cards by block id [len=%d]", len(cards))

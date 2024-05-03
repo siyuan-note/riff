@@ -63,7 +63,7 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 
 	cardSourceID := newID()
 	c := fsrs.NewCard()
-	card := &FSRSCard{BaseCard: &BaseCard{CID: id}, C: &c}
+	card := &FSRSCard{BaseCard: &BaseCard{CID: id, SID: cardSourceID}, C: &c}
 	store.cards[id] = card
 
 	cardSource := &BaseCardSource{
@@ -103,8 +103,13 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	}
 	cardSourceID := card.CardSourceID()
 	cardSource := store.cardSources[cardSourceID]
+	cardSource.GetCardIDMap()
 	if nil != cardSource {
 		cardSource.RemoveCardID(id)
+	}
+	cardMap := cardSource.GetCardIDMap()
+	if 0 == len(cardMap) {
+		delete(store.cardSources, cardSourceID)
 	}
 	delete(store.cards, id)
 	return card
