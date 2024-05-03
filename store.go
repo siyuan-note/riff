@@ -113,6 +113,9 @@ func (store *BaseStore) GetSaveDir() string {
 func (store *BaseStore) getMsgPackPath() string {
 	return filepath.Join(store.saveDir, store.id+".cards")
 }
+func (store *BaseStore) getCardSourcesMsgPackPath() string {
+	return filepath.Join(store.saveDir, store.id+".cardsources")
+}
 
 // Rating 描述了闪卡复习的评分。
 type Rating int8

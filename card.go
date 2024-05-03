@@ -23,8 +23,32 @@ type Card interface {
 	// ID 返回闪卡 ID。
 	ID() string
 
-	// BlockID 返回闪卡关联的内容块 ID。
-	BlockID() string
+	// CardSourceID 返回关联的cardsource ID
+	CardSourceID() string
+
+	// GetGroup 返回当前卡片的Group
+	GetGroup() string
+
+	// SetGroup 设置当前卡片的Group
+	SetGroup(newGroup string)
+
+	// GetTag 返回当前卡片的Tag
+	GetTag() string
+
+	// SetTag 设置当前卡片的Tag
+	SetTag(newTag string)
+
+	// GetSuspend 返回当前卡片的暂停状态
+	GetSuspend() bool
+
+	// SwtichSuspend 切换当前卡片的暂停状态
+	SwtichSuspend()
+
+	// GetContext 返回当前卡片的Context
+	GetContext() map[string]string
+
+	// SetContext 使用 value 设置当前卡片的 key
+	SetContext(key string, value string)
 
 	// NextDues 返回每种评分对应的下次到期时间。
 	NextDues() map[Rating]time.Time
@@ -59,9 +83,13 @@ type Card interface {
 
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	CID   string
-	BID   string
-	NDues map[Rating]time.Time
+	CID     string
+	SID     string
+	Group   string
+	Tag     string
+	Suspend bool
+	Context map[string]string
+	NDues   map[Rating]time.Time
 }
 
 func (card *BaseCard) NextDues() map[Rating]time.Time {
@@ -76,6 +104,38 @@ func (card *BaseCard) ID() string {
 	return card.CID
 }
 
-func (card *BaseCard) BlockID() string {
-	return card.BID
+func (card *BaseCard) CardSourceID() string {
+	return card.SID
+}
+
+func (card *BaseCard) GetGroup() string {
+	return card.Group
+}
+
+func (card *BaseCard) SetGroup(newGroup string) {
+	card.Group = newGroup
+}
+
+func (card *BaseCard) GetTag() string {
+	return card.Tag
+}
+
+func (card *BaseCard) SetTag(newTag string) {
+	card.Tag = newTag
+}
+
+func (card *BaseCard) GetSuspend() bool {
+	return card.Suspend
+}
+
+func (card *BaseCard) SwtichSuspend() {
+	card.Suspend = !card.Suspend
+}
+
+func (card *BaseCard) GetContext() map[string]string {
+	return card.Context
+}
+
+func (card *BaseCard) SetContext(key string, value string) {
+	card.Context[key] = value
 }
