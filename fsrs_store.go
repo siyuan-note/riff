@@ -17,6 +17,7 @@
 package riff
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -115,6 +116,7 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	return card
 }
 
+// 获取 cardsource 关联的 blockIDs
 func getCardSourceRelatedBlockID(cardSource CardSource) (ret []string) {
 	blockIDsStr := cardSource.GetContext()[builtInContext]
 	blockIDsStr = strings.Replace(blockIDsStr, " ", "", -1)
@@ -398,6 +400,102 @@ func (store *FSRSStore) AddCardSource(id string, CType CardType, cardIDMap map[s
 	}
 	store.cardSources[id] = cardSource
 	return cardSource
+}
+
+func (store *FSRSStore) setNewCardSOurceRelatedCard(cardID, cardSourceID, key string) (err error) {
+	cardSource, ok := store.cardSources[cardSourceID]
+	if !ok {
+		err = errors.New("cardsource not found")
+		return
+	}
+
+	c := fsrs.NewCard()
+	card := &FSRSCard{BaseCard: &BaseCard{CID: cardID, SID: cardSourceID}, C: &c}
+	store.cards[cardID] = card
+	cardSource.SetCardIDMap(key, cardID)
+	return
+}
+
+func (store *FSRSStore) UpdateCardSource(id string, cardIDMap map[string]string) (err error) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	cardSource, ok := store.cardSources[id]
+	if !ok {
+		err = errors.New("cardsource not found")
+		return
+	}
+	originCardIDMap := cardSource.GetCardIDMap()
+	var deleteCardIDs []string
+	for key := range originCardIDMap {
+		if cardID, ok := cardIDMap[key]; !ok {
+			deleteCardIDs = append(deleteCardIDs, cardID)
+		}
+	}
+	for _, cardID := range deleteCardIDs {
+		store.RemoveCard(cardID)
+	}
+	for key, cardID := range cardIDMap {
+		if originCardID, ok := originCardIDMap[key]; !ok {
+			err = store.setNewCardSOurceRelatedCard(cardID, id, key)
+			if nil != err {
+				return
+			}
+		} else {
+			if originCardID == cardID {
+				continue
+			}
+			store.RemoveCard(originCardID)
+			err = store.setNewCardSOurceRelatedCard(cardID, id, key)
+			if nil != err {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (store *FSRSStore) GetCardSourceByID(id string) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	ret := store.cardSources[id]
+	if nil == ret {
+		return nil
+	}
+	return ret
+}
+
+func (store *FSRSStore) GetCardSourceByCard(card Card) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	id := card.CardSourceID()
+	ret := store.cardSources[id]
+	if nil == ret {
+		return nil
+	}
+	return ret
+}
+
+func (store *FSRSStore) RemoveCardSource(id string) {
+	cardSource := store.cardSources[id]
+	if nil == cardSource {
+		return
+	}
+	cardIDs := cardSource.GetCardIDs()
+
+	for _, cardID := range cardIDs {
+		store.RemoveCard(cardID)
+	}
+}
+
+func (store *FSRSStore) SetCardSource(cardSource CardSource) (err error) {
+	cardIDMap := cardSource.GetCardIDMap()
+	id := cardSource.SourceID()
+	err = store.UpdateCardSource(id, cardIDMap)
+	if nil != err {
+		return
+	}
+	store.cardSources[id] = cardSource.(*BaseCardSource)
+	return
 }
 
 type FSRSCard struct {

@@ -11,11 +11,13 @@ type CardSourceStore interface {
 	// 通过 CardSourceID 获得 CardSource
 	GetCardSourceByID(id string) CardSource
 
-	// 通过 Card获取
+	// 通过 Card 获取 cardSource
 	GetCardSourceByCard(card Card) CardSource
 
-	SetCardSource(cardSource CardSource)
+	// 设置 store 内相同 cardSourceID 的 cardsource 为传入的cardSource
+	SetCardSource(cardSource CardSource) (err error)
 
+	// 通过 id 删除 cardSource
 	RemoveCardSource(id string)
 
 	Load()
