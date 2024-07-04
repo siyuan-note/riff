@@ -70,7 +70,7 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	cardSource := &BaseCardSource{
 		SID:     cardSourceID,
 		CType:   builtInCardType,
-		CIDMap:  map[string]string{builtInCardIDMapKey: id},
+		CIDMap:  map[CardID]CardKey{CardID(id): CardKey(builtInCardIDMapKey)},
 		Context: map[string]string{builtInContext: blockID}}
 	store.cardSources[cardSourceID] = cardSource
 	return card
@@ -106,7 +106,7 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	cardSource := store.cardSources[cardSourceID]
 	cardSource.GetCardIDMap()
 	if nil != cardSource {
-		cardSource.RemoveCardID(id)
+		cardSource.RemoveCardID(CardID(id))
 	}
 	cardMap := cardSource.GetCardIDMap()
 	if 0 == len(cardMap) {
@@ -386,16 +386,16 @@ func (store *FSRSStore) SaveLog(log *Log) (err error) {
 	return
 }
 
-func (store *FSRSStore) AddCardSource(id string, CType CardType, cardIDMap map[string]string) CardSource {
+func (store *FSRSStore) AddCardSource(id string, CType CardType, cardIDMap map[CardID]CardKey) CardSource {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 	cardSource := &BaseCardSource{
 		SID:    id,
 		CType:  CType,
 		CIDMap: cardIDMap}
-	for _, cardID := range cardIDMap {
+	for cardID := range cardIDMap {
 		c := fsrs.NewCard()
-		card := &FSRSCard{BaseCard: &BaseCard{CID: cardID}, C: &c}
+		card := &FSRSCard{BaseCard: &BaseCard{CID: string(cardID)}, C: &c}
 		store.cards[id] = card
 	}
 	store.cardSources[id] = cardSource
@@ -412,7 +412,7 @@ func (store *FSRSStore) setNewCardSOurceRelatedCard(cardID, cardSourceID, key st
 	c := fsrs.NewCard()
 	card := &FSRSCard{BaseCard: &BaseCard{CID: cardID, SID: cardSourceID}, C: &c}
 	store.cards[cardID] = card
-	cardSource.SetCardIDMap(key, cardID)
+	cardSource.SetCardIDMap(CardKey(key), CardID(cardID))
 	return
 }
 

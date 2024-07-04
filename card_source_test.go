@@ -14,13 +14,12 @@ func TestCardSource(t *testing.T) {
 		"aaa": "bbb",
 	}
 	basecardSource := &BaseCardSource{
-		SID:   sid,
-		CType: builtInCardType,
-		CIDMap: map[string]string{
-			"card": cid,
-		},
-		Data: data,
+		SID:    sid,
+		CType:  builtInCardType,
+		CIDMap: map[CardID]CardKey{},
+		Data:   data,
 	}
+	basecardSource.SetCardIDMap("card", CardID(cid))
 	var cardSource CardSource = basecardSource
 	if cardSource.SourceID() != sid {
 		t.Fatalf("cardSource id [%s] != [%s]", cardSource.SourceID(), sid)
@@ -39,11 +38,12 @@ func TestCardSource(t *testing.T) {
 	if cardSource.GetCardIDMap()["card"] != cid {
 		t.Fatalf("cardSource CardIDMap key card [%s] != [%s]", cardSource.GetCardIDMap()["card"], cid)
 	}
-	cardSource.SetCardIDMap("card", cid2)
+	cardSource.SetCardIDMap("card", CardID(cid2))
 	if cardSource.GetCardIDMap()["card"] != cid2 {
 		t.Fatalf("cardSource SetCardIDMap key card [%s] != [%s]", cardSource.GetCardIDMap()["card"], cid)
 	}
 	if len(cardSource.GetCardIDs()) != 1 {
+		t.Logf("current cardIDs is [%s]", fmt.Sprint(cardSource.GetCardIDs()))
 		t.Fatalf("cardSource GetCardIDs cardIDs len [%s] != 1", fmt.Sprint(len(cardSource.GetCardIDs())))
 	}
 	if cardSource.GetCardIDs()[0] != cid2 {

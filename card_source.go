@@ -17,12 +17,12 @@ type CardSource interface {
 	// 返回关联的CardID list
 	GetCardIDs() []string
 
-	RemoveCardID(CardID string)
+	RemoveCardID(CardID CardID)
 
 	GetCardIDMap() map[string]string
 
 	// 更新关联的CardID list
-	SetCardIDMap(key string, CardID string)
+	SetCardIDMap(key CardKey, CardID CardID)
 
 	// 返回卡源的 Context
 	GetContext() map[string]string
@@ -33,11 +33,15 @@ type CardSource interface {
 
 type CardType string
 
+type CardKey string
+
+type CardID string
+
 // BaseCardSource 描述了卡源的基础实现
 type BaseCardSource struct {
 	SID     string
 	CType   CardType
-	CIDMap  map[string]string
+	CIDMap  map[CardID]CardKey
 	Data    string
 	Context map[string]string
 }
@@ -66,28 +70,34 @@ func (source *BaseCardSource) SetSourceData(NewData string) {
 
 func (source *BaseCardSource) GetCardIDs() []string {
 	var CIDs []string
-	for _, CID := range source.CIDMap {
-		CIDs = append(CIDs, CID)
+	for CID := range source.CIDMap {
+		CIDs = append(CIDs, string(CID))
 	}
 	return CIDs
 }
 
-func (source *BaseCardSource) RemoveCardID(CardID string) {
+func (source *BaseCardSource) RemoveCardID(cardID CardID) {
 
-	for key, CID := range source.CIDMap {
-		if CID == CardID {
-			delete(source.CIDMap, key)
-		}
-	}
-	return
+	delete(source.CIDMap, cardID)
+
 }
 
 func (source *BaseCardSource) GetCardIDMap() map[string]string {
-	return source.CIDMap
+	back := make(map[string]string)
+	for cardID, cardKey := range source.CIDMap {
+		back[string(cardKey)] = string(cardID)
+	}
+	return back
 }
 
-func (source *BaseCardSource) SetCardIDMap(key string, CardID string) {
-	source.CIDMap[key] = CardID
+func (source *BaseCardSource) SetCardIDMap(key CardKey, cardID CardID) {
+	// source.CIDMap[key] = CardID
+	for CID, CKey := range source.CIDMap {
+		if CKey == key {
+			delete(source.CIDMap, CID)
+		}
+	}
+	source.CIDMap[cardID] = key
 }
 
 func (source *BaseCardSource) GetContext() map[string]string {

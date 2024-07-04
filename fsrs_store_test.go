@@ -33,16 +33,7 @@ const (
 	weights          = "0.40, 0.60, 2.40, 5.80, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61"
 )
 
-type BaseStruct struct {
-	CID string
-}
-
 func TestFSRSStore(t *testing.T) {
-
-	newCard := BaseStruct{
-		CID: "1111",
-	}
-	t.Log(newCard.CID)
 
 	const storePath = "testdata"
 	os.MkdirAll(storePath, 0755)
