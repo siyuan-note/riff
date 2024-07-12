@@ -17,6 +17,7 @@
 package riff
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,8 +35,9 @@ import (
 type FSRSStore struct {
 	*BaseStore
 
-	cards  map[string]*FSRSCard
-	params fsrs.Parameters
+	cardSources map[string]*BaseCardSource
+	cards       map[string]*FSRSCard
+	params      fsrs.Parameters
 }
 
 func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval int, weights string) *FSRSStore {
@@ -49,9 +51,10 @@ func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval 
 	}
 
 	return &FSRSStore{
-		BaseStore: NewBaseStore(id, "fsrs", saveDir),
-		cards:     map[string]*FSRSCard{},
-		params:    params,
+		BaseStore:   NewBaseStore(id, "fsrs", saveDir),
+		cardSources: map[string]*BaseCardSource{},
+		cards:       map[string]*FSRSCard{},
+		params:      params,
 	}
 }
 
@@ -59,9 +62,17 @@ func (store *FSRSStore) AddCard(id, blockID string) Card {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	cardSourceID := newID()
 	c := fsrs.NewCard()
-	card := &FSRSCard{BaseCard: &BaseCard{id, blockID, nil}, C: &c}
+	card := &FSRSCard{BaseCard: &BaseCard{CID: id, SID: cardSourceID}, C: &c}
 	store.cards[id] = card
+
+	cardSource := &BaseCardSource{
+		SID:     cardSourceID,
+		CType:   builtInCardType,
+		CIDMap:  map[CardID]CardKey{CardID(id): CardKey(builtInCardIDMapKey)},
+		Context: map[string]string{builtInContext: blockID}}
+	store.cardSources[cardSourceID] = cardSource
 	return card
 }
 
@@ -91,18 +102,53 @@ func (store *FSRSStore) RemoveCard(id string) Card {
 	if nil == card {
 		return nil
 	}
+	cardSourceID := card.CardSourceID()
+	cardSource := store.cardSources[cardSourceID]
+	cardSource.GetCardIDMap()
+	if nil != cardSource {
+		cardSource.RemoveCardID(CardID(id))
+	}
+	cardMap := cardSource.GetCardIDMap()
+	if 0 == len(cardMap) {
+		delete(store.cardSources, cardSourceID)
+	}
 	delete(store.cards, id)
 	return card
 }
 
+// 获取 cardsource 关联的 blockIDs
+func getCardSourceRelatedBlockID(cardSource CardSource) (ret []string) {
+	blockIDsStr := cardSource.GetContext()[builtInContext]
+	blockIDsStr = strings.Replace(blockIDsStr, " ", "", -1)
+	ret = strings.Split(blockIDsStr, ",")
+	ret = gulu.Str.RemoveDuplicatedElem(ret)
+	return
+}
+
+// 根据 blockID 从 cardSource Context["blockIDs"] 里查询，返回一个不重复的CardIDs
+// 这个操作没有加锁，调用者必须自己加锁
+func (store *FSRSStore) getCardIDsByBlockID(blockID string) (ret []string) {
+	for _, cardSource := range store.cardSources {
+		cardSourceBlockIDs := getCardSourceRelatedBlockID(cardSource)
+		if gulu.Str.Contains(blockID, cardSourceBlockIDs) {
+			for _, cardID := range cardSource.GetCardIDs() {
+				if _, ok := store.cards[cardID]; ok {
+					ret = append(ret, cardID)
+				}
+			}
+		}
+	}
+	ret = gulu.Str.RemoveDuplicatedElem(ret)
+
+	return
+}
 func (store *FSRSStore) GetCardsByBlockID(blockID string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	for _, card := range store.cards {
-		if card.BlockID() == blockID {
-			ret = append(ret, card)
-		}
+	cardIDs := store.getCardIDsByBlockID(blockID)
+	for _, cardID := range cardIDs {
+		ret = append(ret, store.cards[cardID])
 	}
 	return
 }
@@ -111,11 +157,17 @@ func (store *FSRSStore) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	var cardIDs []string
+
 	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	for _, card := range store.cards {
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+
+	for _, blockID := range blockIDs {
+		cardIDs = append(cardIDs, store.getCardIDsByBlockID(blockID)...)
+	}
+
+	cardIDs = gulu.Str.RemoveDuplicatedElem(cardIDs)
+	for _, cardID := range cardIDs {
+		ret = append(ret, store.cards[cardID])
 	}
 	return
 }
@@ -124,16 +176,13 @@ func (store *FSRSStore) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	for _, card := range store.cards {
+	cards := store.GetCardsByBlockIDs(blockIDs)
+	for _, card := range cards {
 		c := card.Impl().(*fsrs.Card)
 		if !c.LastReview.IsZero() {
 			continue
 		}
-
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+		ret = append(ret, card)
 	}
 	return
 }
@@ -142,17 +191,15 @@ func (store *FSRSStore) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	now := time.Now()
-	for _, card := range store.cards {
+
+	cards := store.GetCardsByBlockIDs(blockIDs)
+	for _, card := range cards {
 		c := card.Impl().(*fsrs.Card)
 		if now.Before(c.Due) {
 			continue
 		}
-
-		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-			ret = append(ret, card)
-		}
+		ret = append(ret, card)
 	}
 	return
 }
@@ -162,8 +209,9 @@ func (store *FSRSStore) GetBlockIDs() (ret []string) {
 	defer store.lock.Unlock()
 
 	ret = []string{}
-	for _, card := range store.cards {
-		ret = append(ret, card.BlockID())
+	for _, cardSource := range store.cardSources {
+		blockIDs := getCardSourceRelatedBlockID(cardSource)
+		ret = append(ret, blockIDs...)
 	}
 	ret = gulu.Str.RemoveDuplicatedElem(ret)
 	sort.Strings(ret)
@@ -246,6 +294,19 @@ func (store *FSRSStore) Load() (err error) {
 		logging.LogErrorf("load cards failed: %s", err)
 		return
 	}
+
+	p = store.getCardSourcesMsgPackPath()
+	if !filelock.IsExist(p) {
+		return
+	}
+	data, err = filelock.ReadFile(p)
+	if nil != err {
+		logging.LogErrorf("load cardsources failed: %s", err)
+	}
+	if err = msgpack.Unmarshal(data, &store.cardSources); nil != err {
+		logging.LogErrorf("load cardsources failed: %s", err)
+		return
+	}
 	return
 }
 
@@ -262,6 +323,17 @@ func (store *FSRSStore) Save() (err error) {
 
 	p := store.getMsgPackPath()
 	data, err := msgpack.Marshal(store.cards)
+	if nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+	if err = filelock.WriteFile(p, data); nil != err {
+		logging.LogErrorf("save cards failed: %s", err)
+		return
+	}
+
+	p = store.getCardSourcesMsgPackPath()
+	data, err = msgpack.Marshal(store.cardSources)
 	if nil != err {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
@@ -311,6 +383,118 @@ func (store *FSRSStore) SaveLog(log *Log) (err error) {
 		logging.LogErrorf("write logs failed: %s", err)
 		return
 	}
+	return
+}
+
+func (store *FSRSStore) AddCardSource(id string, CType CardType, cardIDMap map[CardID]CardKey) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	cardSource := &BaseCardSource{
+		SID:    id,
+		CType:  CType,
+		CIDMap: cardIDMap}
+	for cardID := range cardIDMap {
+		c := fsrs.NewCard()
+		card := &FSRSCard{BaseCard: &BaseCard{CID: string(cardID)}, C: &c}
+		store.cards[id] = card
+	}
+	store.cardSources[id] = cardSource
+	return cardSource
+}
+
+func (store *FSRSStore) setNewCardSOurceRelatedCard(cardID, cardSourceID, key string) (err error) {
+	cardSource, ok := store.cardSources[cardSourceID]
+	if !ok {
+		err = errors.New("cardsource not found")
+		return
+	}
+
+	c := fsrs.NewCard()
+	card := &FSRSCard{BaseCard: &BaseCard{CID: cardID, SID: cardSourceID}, C: &c}
+	store.cards[cardID] = card
+	cardSource.SetCardIDMap(CardKey(key), CardID(cardID))
+	return
+}
+
+func (store *FSRSStore) UpdateCardSource(id string, cardIDMap map[string]string) (err error) {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	cardSource, ok := store.cardSources[id]
+	if !ok {
+		err = errors.New("cardsource not found")
+		return
+	}
+	originCardIDMap := cardSource.GetCardIDMap()
+	var deleteCardIDs []string
+	for key := range originCardIDMap {
+		if cardID, ok := cardIDMap[key]; !ok {
+			deleteCardIDs = append(deleteCardIDs, cardID)
+		}
+	}
+	for _, cardID := range deleteCardIDs {
+		store.RemoveCard(cardID)
+	}
+	for key, cardID := range cardIDMap {
+		if originCardID, ok := originCardIDMap[key]; !ok {
+			err = store.setNewCardSOurceRelatedCard(cardID, id, key)
+			if nil != err {
+				return
+			}
+		} else {
+			if originCardID == cardID {
+				continue
+			}
+			store.RemoveCard(originCardID)
+			err = store.setNewCardSOurceRelatedCard(cardID, id, key)
+			if nil != err {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (store *FSRSStore) GetCardSourceByID(id string) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	ret := store.cardSources[id]
+	if nil == ret {
+		return nil
+	}
+	return ret
+}
+
+func (store *FSRSStore) GetCardSourceByCard(card Card) CardSource {
+	store.lock.Lock()
+	defer store.lock.Unlock()
+	id := card.CardSourceID()
+	ret := store.cardSources[id]
+	if nil == ret {
+		return nil
+	}
+	return ret
+}
+
+func (store *FSRSStore) RemoveCardSource(id string) {
+	cardSource := store.cardSources[id]
+	if nil == cardSource {
+		return
+	}
+	cardIDs := cardSource.GetCardIDs()
+
+	for _, cardID := range cardIDs {
+		store.RemoveCard(cardID)
+	}
+}
+
+func (store *FSRSStore) SetCardSource(cardSource CardSource) (err error) {
+	cardIDMap := cardSource.GetCardIDMap()
+	id := cardSource.SourceID()
+	err = store.UpdateCardSource(id, cardIDMap)
+	if nil != err {
+		return
+	}
+	store.cardSources[id] = cardSource.(*BaseCardSource)
 	return
 }
 
