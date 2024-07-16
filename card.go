@@ -26,6 +26,9 @@ type Card interface {
 	// BlockID 返回闪卡关联的内容块 ID。
 	BlockID() string
 
+	// CSID 获取卡片的 CSID
+	CSID() string
+
 	// NextDues 返回每种评分对应的下次到期时间。
 	NextDues() map[Rating]time.Time
 
@@ -59,9 +62,20 @@ type Card interface {
 
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	CID   string
-	BID   string
-	NDues map[Rating]time.Time
+	CID      string
+	CSID     string
+	Update   time.Time
+	State    State
+	Lapses   int
+	Reps     int
+	Suspend  bool
+	Tag      string
+	Flag     string
+	Priority float64
+	Due      time.Time
+	NDues    map[Rating]time.Time
+	algo     string
+	AlgoImpl interface{}
 }
 
 func (card *BaseCard) NextDues() map[Rating]time.Time {
@@ -76,6 +90,9 @@ func (card *BaseCard) ID() string {
 	return card.CID
 }
 
-func (card *BaseCard) BlockID() string {
-	return card.BID
+func (card *BaseCard) Impl() interface{} {
+	return card.AlgoImpl
+}
+func (card *BaseCard) SetImpl(c interface{}) {
+	card.AlgoImpl = c
 }

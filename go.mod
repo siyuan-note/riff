@@ -4,36 +4,29 @@ go 1.21
 
 toolchain go1.21.6
 
-require (
-	github.com/88250/gulu v1.2.3-0.20231209020950-b7b6994e395c
-	github.com/open-spaced-repetition/go-fsrs v1.2.1
-	github.com/siyuan-note/filelock v0.0.0-20240419132904-2fbfe64f1939
-	github.com/siyuan-note/logging v0.0.0-20231208035918-61f884c854f0
-	github.com/vmihailenco/msgpack/v5 v5.4.1
-)
+require github.com/open-spaced-repetition/go-fsrs v1.2.1
 
 require (
-	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/cloudflare/circl v1.3.8 // indirect
-	github.com/getsentry/sentry-go v0.27.0 // indirect
-	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/google/pprof v0.0.0-20240430035430-e4905b036c4e // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/imroc/req/v3 v3.43.3 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.17.2 // indirect
-	github.com/quic-go/qpack v0.4.0 // indirect
-	github.com/quic-go/quic-go v0.43.0 // indirect
-	github.com/refraction-networking/utls v1.6.4 // indirect
-	github.com/siyuan-note/httpclient v0.0.0-20240429013218-3caa1f89f9ed // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	go.uber.org/mock v0.4.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/goccy/go-json v0.8.1 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.20.0 // indirect
+	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
+	modernc.org/libc v1.52.1 // indirect
+	modernc.org/mathutil v1.6.0 // indirect
+	modernc.org/memory v1.8.0 // indirect
+	modernc.org/sqlite v1.30.2 // indirect
+	modernc.org/strutil v1.2.0 // indirect
+	modernc.org/token v1.1.0 // indirect
+	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
+	xorm.io/xorm v1.3.9 // indirect
 )
