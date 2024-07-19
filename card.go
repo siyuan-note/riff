@@ -16,7 +16,13 @@
 
 package riff
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/open-spaced-repetition/go-fsrs"
+	_ "modernc.org/sqlite"
+)
 
 // Card 描述了闪卡。
 type Card interface {
@@ -24,10 +30,10 @@ type Card interface {
 	ID() string
 
 	// BlockID 返回闪卡关联的内容块 ID。
-	BlockID() string
+	// BlockID() string
 
 	// CSID 获取卡片的 CSID
-	CSID() string
+	GetCSID() string
 
 	// NextDues 返回每种评分对应的下次到期时间。
 	NextDues() map[Rating]time.Time
@@ -36,22 +42,31 @@ type Card interface {
 	SetNextDues(map[Rating]time.Time)
 
 	// SetDue 设置到期时间。
-	SetDue(time.Time)
+	// SetDue(time.Time)
 
 	// GetLapses 返回闪卡的遗忘次数。
-	GetLapses() int
+	// GetLapses() int
 
-	// GetReps 返回闪卡的复习次数。
-	GetReps() int
+	// // GetReps 返回闪卡的复习次数。
+	// GetReps() int
 
-	// GetState 返回闪卡状态。
-	GetState() State
+	// // GetState 返回闪卡状态。
+	// GetState() State
 
-	// GetLastReview 返回闪卡的最后复习时间。
-	GetLastReview() time.Time
+	// // GetLastReview 返回闪卡的最后复习时间。
+	// GetLastReview() time.Time
 
 	// Clone 返回闪卡的克隆。
-	Clone() Card
+	// Clone() Card
+
+	// 返回 Algo
+	GetAlgo() Algo
+
+	// 返回 MarshalImpl
+	GetMarshalImpl() []uint8
+
+	// 对 Impl 进行 Marshal
+	MarshalImpl()
 
 	// Impl 返回具体的闪卡实现。
 	Impl() interface{}
@@ -60,9 +75,20 @@ type Card interface {
 	SetImpl(c interface{})
 }
 
+func UnmarshalImpl(card Card) {
+	switch card.GetAlgo() {
+	case AlgoFSRS:
+		impl := fsrs.Card{}
+		json.Unmarshal(card.GetMarshalImpl(), &impl)
+		card.SetImpl(impl)
+	default:
+		return
+	}
+}
+
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	CID      string
+	CID      string `xorm:"pk"`
 	CSID     string
 	Update   time.Time
 	State    State
@@ -74,8 +100,19 @@ type BaseCard struct {
 	Priority float64
 	Due      time.Time
 	NDues    map[Rating]time.Time
-	algo     string
-	AlgoImpl interface{}
+	Algo     Algo
+	algoImpl interface{}
+	AlgoImpl []uint8
+}
+
+func NewBaseCard(cs CardSource) (card *BaseCard) {
+	CSID := cs.GetCSID()
+	card = &BaseCard{
+		CSID: CSID,
+		CID:  newID(),
+		Due:  time.Now(),
+	}
+	return
 }
 
 func (card *BaseCard) NextDues() map[Rating]time.Time {
@@ -90,9 +127,25 @@ func (card *BaseCard) ID() string {
 	return card.CID
 }
 
+func (card *BaseCard) GetCSID() string {
+	return card.CSID
+}
+
 func (card *BaseCard) Impl() interface{} {
-	return card.AlgoImpl
+	return card.algoImpl
 }
 func (card *BaseCard) SetImpl(c interface{}) {
-	card.AlgoImpl = c
+	card.algoImpl = c
+}
+
+func (card *BaseCard) GetMarshalImpl() []uint8 {
+	return card.AlgoImpl
+}
+
+func (card *BaseCard) MarshalImpl() {
+	data, _ := json.Marshal(card.algoImpl)
+	card.AlgoImpl = data
+}
+func (card *BaseCard) GetAlgo() Algo {
+	return card.Algo
 }

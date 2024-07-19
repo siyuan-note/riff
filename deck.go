@@ -16,8 +16,9 @@
 
 package riff
 
+import "time"
+
 type Deck interface {
-	New(id string) Deck
 	AddCard(cardID, blockID string)
 	RemoveCard(cardID string)
 	SetCard(card Card)
@@ -36,11 +37,98 @@ type Deck interface {
 
 // BaseDeck 描述了一套闪卡包。
 type BaseDeck struct {
-	DID          string // ID
-	Name         string // 名称
-	Desc         string // 描述
-	Created      int64  // 创建时间
-	Updated      int64  // 更新时间
+	DID          string    // DeckID
+	Name         string    // 名称
+	Desc         string    // 描述
+	Created      time.Time // 创建时间
+	Updated      time.Time `xorm:"updated"` // 更新时间
 	ParentDeckID string
 	DeckContext  map[string]interface{}
+	riff         *Riff
+}
+
+func DefaultBaseDeck() *BaseDeck {
+	Created := time.Now()
+	deck := &BaseDeck{
+		DID:     builtInDeck,
+		Name:    "builtInDeck",
+		Desc:    "built in Deck",
+		Created: Created,
+	}
+	return deck
+}
+
+func NewBaseDeck() (deck *BaseDeck) {
+	deck = &BaseDeck{
+		DID:     newID(),
+		Created: time.Now(),
+	}
+	return
+}
+
+func (bd *BaseDeck) AddCard(cardID, blockID string) {
+	// 空实现
+}
+
+func (bd *BaseDeck) RemoveCard(cardID string) {
+	// 空实现
+}
+
+func (bd *BaseDeck) SetCard(card Card) {
+	// 空实现
+}
+
+func (bd *BaseDeck) GetCard(cardID string) Card {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) GetCardsByBlockID(blockID string) (ret []Card) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) GetCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) GetBlockIDs() (ret []string) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) CountCards() int {
+	// 空实现
+	return 0
+}
+
+func (bd *BaseDeck) Save() (err error) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) SaveLog(log *Log) (err error) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) Review(cardID string, rating Rating) (ret *Log) {
+	// 空实现
+	return nil
+}
+
+func (bd *BaseDeck) Dues() (ret []Card) {
+	// 空实现
+	return nil
 }

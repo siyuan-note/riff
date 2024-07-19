@@ -17,10 +17,8 @@
 package riff
 
 import (
-	"math/rand"
 	"path/filepath"
 	"sync"
-	"time"
 )
 
 // Store 描述了闪卡存储。
@@ -112,46 +110,4 @@ func (store *BaseStore) GetSaveDir() string {
 
 func (store *BaseStore) getMsgPackPath() string {
 	return filepath.Join(store.saveDir, store.id+".cards")
-}
-
-// Rating 描述了闪卡复习的评分。
-type Rating int8
-
-const (
-	Again Rating = iota + 1 // 完全不会，必须再复习一遍
-	Hard                    // 有点难
-	Good                    // 一般
-	Easy                    // 很容易
-)
-
-// Algo 描述了闪卡复习算法的名称。
-type Algo string
-
-const (
-	AlgoFSRS Algo = "fsrs"
-	AlgoSM2  Algo = "sm2"
-)
-
-// State 描述了闪卡的状态。
-type State int8
-
-const (
-	New State = iota
-	Learning
-	Review
-	Relearning
-)
-
-func newID() string {
-	now := time.Now()
-	return now.Format("20060102150405") + "-" + randStr(7)
-}
-
-func randStr(length int) string {
-	letter := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-	b := make([]rune, length)
-	for i := range b {
-		b[i] = letter[rand.Intn(len(letter))]
-	}
-	return string(b)
 }
