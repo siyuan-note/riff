@@ -83,14 +83,24 @@ func checkExist(db xorm.Interface, data interface{}) error {
 
 func batchCheck(table, field string, IDs []string, db xorm.Interface) (existMap map[string]bool, err error) {
 
+	const MAX_BATCH = 5000
+
 	existMap = map[string]bool{}
 	existsIDs := make([]string, 0)
 	IDs = gulu.Str.RemoveDuplicatedElem(IDs)
+	IDsLength := len(IDs)
 
-	err = db.Table(table).
-		In(field, IDs).
-		Cols(field).
-		Find(&existsIDs)
+	for i := 0; i < IDsLength; i += MAX_BATCH {
+		end := i + MAX_BATCH
+		if end > IDsLength {
+			end = IDsLength
+		}
+		subIDs := IDs[i:end]
+		err = db.Table(table).
+			In(field, subIDs).
+			Cols(field).
+			Find(&existsIDs)
+	}
 
 	for _, existsID := range existsIDs {
 		existMap[existsID] = true
@@ -155,77 +165,24 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		}
 	}
 
-	// for _, cardSource := range existsCardSourceList {
-	// 	br.db.Insert(cardSource)
-	// }
-	start1 := time.Now()
-
-	sqlStr := "INSERT INTO base_card_source (c_s_i_d,hash,block_i_ds,d_i_d,c_type,source_context) VALUES (?,?,?,?,?,?)"
-
-	sqldb := br.db.DB()
-	tx, _ := sqldb.Begin()
-	statement, _ := tx.Prepare(sqlStr)
-	for _, cardSource := range existsCardSourceList {
-		baseCardSource := cardSource.(*BaseCardSource)
-
-		csid, _ := json.Marshal(baseCardSource.CSID)
-		hash, _ := json.Marshal(baseCardSource.Hash)
-		block_i_ds, _ := json.Marshal(baseCardSource.Hash)
-		d_i_d, _ := json.Marshal(baseCardSource.DID)
-		c_type, _ := json.Marshal(baseCardSource.CType)
-		source_context, _ := json.Marshal(baseCardSource.SourceContext)
-		res, err := statement.Exec(csid, hash, block_i_ds, d_i_d, c_type, source_context)
-		if err != nil {
-			err.Error()
-			res.LastInsertId()
-		}
-	}
-	tx.Commit()
-	fmt.Printf("time insert before commit taken %s to insert len : %d \n", time.Since(start1), len(existsCardSourceList))
-
 	session := br.db.NewSession()
-	session.NoAutoCondition()
 	defer session.Close()
 	session.Begin()
-	start := time.Now()
-
-	// splitList := splitSlice(existsCardSourceList, 100)
-
-	// for _, subList := range splitList {
-	// 	_, err = session.Insert(&subList)
-	// 	if err != nil {
-	// 		err.Error()
-	// 	}
-	// }
 
 	for _, cardSource := range existsCardSourceList {
 		// session.Prepare()
 		_, err = session.Insert(cardSource)
 		if err != nil {
-			err.Error()
+			return
 		}
 	}
 
-	fmt.Printf("time insert before commit taken %s to insert len : %d", time.Since(start), len(existsCardSourceList))
 	err = session.Commit()
-	fmt.Printf("time insert taken %s to insert len : %d", time.Since(start), len(existsCardSourceList))
-	// _, err = br.db.Insert(&existsCardSourceList)
 
 	testList := make([]BaseCardSource, 0)
 	br.db.Find(&testList)
-	return
-}
 
-func splitSlice(slice []CardSource, chunkSize int) [][]CardSource {
-	var result [][]CardSource
-	for i := 0; i < len(slice); i += chunkSize {
-		end := i + chunkSize
-		if end > len(slice) {
-			end = len(slice)
-		}
-		result = append(result, slice[i:end])
-	}
-	return result
+	return
 }
 
 func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
@@ -250,8 +207,21 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		}
 	}
 
-	br.db.Insert(&existsCardList)
+	session := br.db.NewSession()
+	defer session.Close()
+	session.Begin()
 
+	for _, card := range existsCardList {
+		// session.Prepare()
+		_, err = session.Insert(card)
+		if err != nil {
+			return
+		}
+	}
+
+	err = session.Commit()
+	test := make([]BaseCard, 0)
+	br.db.Find(&test)
 	return
 }
 
