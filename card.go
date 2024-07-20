@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/open-spaced-repetition/go-fsrs"
+	"github.com/siyuan-note/logging"
 	_ "modernc.org/sqlite"
 )
 
@@ -62,11 +63,15 @@ type Card interface {
 	// 返回 Algo
 	GetAlgo() Algo
 
+	UseAlgo(algo Algo)
+
 	// 返回 MarshalImpl
 	GetMarshalImpl() []uint8
 
 	// 对 Impl 进行 Marshal
 	MarshalImpl()
+
+	UnmarshalImpl()
 
 	// Impl 返回具体的闪卡实现。
 	Impl() interface{}
@@ -88,29 +93,31 @@ func UnmarshalImpl(card Card) {
 
 // BaseCard 描述了基础的闪卡实现。
 type BaseCard struct {
-	CID      string `xorm:"pk"`
-	CSID     string
-	Update   time.Time
-	State    State
-	Lapses   int
-	Reps     int
-	Suspend  bool
-	Tag      string
-	Flag     string
-	Priority float64
-	Due      time.Time
-	NDues    map[Rating]time.Time
-	Algo     Algo
-	algoImpl interface{}
-	AlgoImpl []uint8
+	CID          string `xorm:"pk index"`
+	CSID         string
+	Update       time.Time
+	State        State
+	Lapses       int
+	Reps         int
+	Suspend      bool
+	Tag          string
+	Flag         string
+	Priority     float64
+	Due          time.Time
+	NDues        map[Rating]time.Time
+	Algo         Algo
+	AlgoImpl     interface{} `xorm:"-"`
+	AlgoImplData []uint8     `json:"-"`
 }
 
 func NewBaseCard(cs CardSource) (card *BaseCard) {
 	CSID := cs.GetCSID()
 	card = &BaseCard{
-		CSID: CSID,
-		CID:  newID(),
-		Due:  time.Now(),
+		CSID:     CSID,
+		CID:      newID(),
+		Due:      time.Now(),
+		NDues:    map[Rating]time.Time{},
+		Priority: 0.5,
 	}
 	return
 }
@@ -132,20 +139,37 @@ func (card *BaseCard) GetCSID() string {
 }
 
 func (card *BaseCard) Impl() interface{} {
-	return card.algoImpl
+	return card.AlgoImpl
 }
 func (card *BaseCard) SetImpl(c interface{}) {
-	card.algoImpl = c
+	card.AlgoImpl = c
+}
+
+func (card *BaseCard) UseAlgo(algo Algo) {
+	switch algo {
+	case AlgoFSRS:
+		AlgoImpl := fsrs.NewCard()
+		card.AlgoImpl = AlgoImpl
+		card.Algo = AlgoFSRS
+		// card.Due = AlgoImpl.Due
+	default:
+		logging.LogErrorf("unsupported Algo: %s", algo)
+	}
 }
 
 func (card *BaseCard) GetMarshalImpl() []uint8 {
-	return card.AlgoImpl
+	return card.AlgoImplData
 }
 
 func (card *BaseCard) MarshalImpl() {
-	data, _ := json.Marshal(card.algoImpl)
-	card.AlgoImpl = data
+	data, _ := json.Marshal(card.AlgoImpl)
+	card.AlgoImplData = data
 }
+
+func (card *BaseCard) UnmarshalImpl() {
+	UnmarshalImpl(card)
+}
+
 func (card *BaseCard) GetAlgo() Algo {
 	return card.Algo
 }

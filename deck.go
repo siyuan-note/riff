@@ -37,31 +37,42 @@ type Deck interface {
 
 // BaseDeck 描述了一套闪卡包。
 type BaseDeck struct {
-	DID          string    // DeckID
-	Name         string    // 名称
-	Desc         string    // 描述
+	DID          string // DeckID
+	Name         string // 名称
+	Desc         string // 描述
+	DeckType     DeckType
 	Created      time.Time // 创建时间
 	Updated      time.Time `xorm:"updated"` // 更新时间
 	ParentDeckID string
 	DeckContext  map[string]interface{}
-	riff         *Riff
+	riff         *Riff `json:"-"`
 }
+
+type DeckType string
+
+const (
+	Set        DeckType = "Set"
+	Collection DeckType = "Collection"
+)
 
 func DefaultBaseDeck() *BaseDeck {
 	Created := time.Now()
 	deck := &BaseDeck{
-		DID:     builtInDeck,
-		Name:    "builtInDeck",
-		Desc:    "built in Deck",
-		Created: Created,
+		DID:         builtInDeck,
+		Name:        "builtInDeck",
+		Desc:        "built in Deck",
+		Created:     Created,
+		DeckType:    Collection,
+		DeckContext: map[string]interface{}{},
 	}
 	return deck
 }
 
 func NewBaseDeck() (deck *BaseDeck) {
 	deck = &BaseDeck{
-		DID:     newID(),
-		Created: time.Now(),
+		DID:      newID(),
+		Created:  time.Now(),
+		DeckType: Collection,
 	}
 	return
 }

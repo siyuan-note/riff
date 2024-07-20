@@ -2,14 +2,15 @@ package riff
 
 type CardSource interface {
 	GetCSID() string
-	GetDID() string
+	GetDIDs() []string
+	GetBlockIDs() []string
 }
 
 type BaseCardSource struct {
-	CSID          string
+	CSID          string `xorm:"pk index"`
 	Hash          string
 	BlockIDs      []string
-	DID           string
+	DID           []string
 	CType         string
 	SourceContext map[string]interface{}
 }
@@ -17,8 +18,9 @@ type BaseCardSource struct {
 func NewBaseCardSource(DID string) *BaseCardSource {
 	ID := newID()
 	cardSource := &BaseCardSource{
-		CSID: ID,
-		DID:  DID,
+		CSID:          ID,
+		DID:           []string{DID},
+		SourceContext: map[string]interface{}{},
 	}
 	return cardSource
 }
@@ -27,6 +29,9 @@ func (cs *BaseCardSource) GetCSID() string {
 	return cs.CSID
 }
 
-func (cs *BaseCardSource) GetDID() string {
+func (cs *BaseCardSource) GetDIDs() []string {
 	return cs.DID
+}
+func (cs *BaseCardSource) GetBlockIDs() []string {
+	return cs.BlockIDs
 }

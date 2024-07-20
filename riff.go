@@ -1,9 +1,17 @@
 package riff
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand"
+	"os"
+	"path"
 	"time"
 
+	"github.com/88250/gulu"
+
+	"github.com/siyuan-note/filelock"
+	"github.com/siyuan-note/logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
@@ -24,13 +32,14 @@ type Riff interface {
 }
 
 type BaseRiff struct {
-	db                  xorm.Interface
+	db                  *xorm.Engine
 	MaxRequestRetention float64
 	MinRequestRetention float64
 }
 
 func NewBaseRiff() Riff {
-	orm, err := xorm.NewEngine("sqlite", ":memory:?_pragma=foreign_keys(1)")
+	// orm, err := xorm.NewEngine("sqlite", ":memory:?_pragma=foreign_keys(1)")
+	orm, err := xorm.NewEngine("sqlite", "file::memory:?mode=memory&cache=shared&loc=auto")
 	if err != nil {
 		return &BaseRiff{}
 	}
@@ -72,46 +81,261 @@ func checkExist(db xorm.Interface, data interface{}) error {
 	return nil
 }
 
+func batchCheck(table, field string, IDs []string, db xorm.Interface) (existMap map[string]bool, err error) {
+
+	existMap = map[string]bool{}
+	existsIDs := make([]string, 0)
+	IDs = gulu.Str.RemoveDuplicatedElem(IDs)
+
+	err = db.Table(table).
+		In(field, IDs).
+		Cols(field).
+		Find(&existsIDs)
+
+	for _, existsID := range existsIDs {
+		existMap[existsID] = true
+	}
+	for _, ID := range IDs {
+		if !existMap[ID] {
+			err = errors.New(fmt.Sprintf("no exit field in %s : %s = %s", table, field, ID))
+			return
+		}
+	}
+
+	return
+}
+
+// func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error) {
+
+// 	for _, cardSource := range cardSources {
+// 		DIDs := cardSource.GetDIDs()
+// 		for _, DID := range DIDs {
+// 			err = checkExist(br.db, &BaseDeck{
+// 				DID: DID,
+// 			})
+// 		}
+
+// 		if err != nil {
+// 			return cardSourceList, err
+// 		}
+// 		_, err = br.db.Insert(cardSource)
+// 		if err != nil {
+// 			return cardSourceList, err
+// 		}
+// 		cardSourceList = append(cardSourceList, cardSource)
+// 	}
+// 	return
+// }
+
 func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error) {
 
-	for _, cardSource := range cardSources {
-		err = checkExist(br.db, &BaseDeck{
-			DID: cardSource.GetDID(),
-		})
-		if err != nil {
-			return cardSourceList, err
-		}
-		_, err = br.db.Insert(cardSource)
-		if err != nil {
-			return cardSourceList, err
-		}
-		cardSourceList = append(cardSourceList, cardSource)
+	DIDs := make([]string, 0)
+	existsCardSourceList := make([]CardSource, 0)
+	for index := range cardSources {
+		DIDs = append(DIDs, cardSources[index].GetDIDs()...)
 	}
+
+	existCSIDMap, err := batchCheck(
+		"base_deck",
+		"d_i_d",
+		DIDs,
+		br.db,
+	)
+
+	for _, cardSource := range cardSources {
+		DIDs := cardSource.GetDIDs()
+		unExist := 0
+		for _, DID := range DIDs {
+			if !existCSIDMap[DID] {
+				unExist += 1
+			}
+		}
+		if unExist == 0 {
+			existsCardSourceList = append(existsCardSourceList, cardSource)
+		}
+	}
+
+	// for _, cardSource := range existsCardSourceList {
+	// 	br.db.Insert(cardSource)
+	// }
+	start1 := time.Now()
+
+	sqlStr := "INSERT INTO base_card_source (c_s_i_d,hash,block_i_ds,d_i_d,c_type,source_context) VALUES (?,?,?,?,?,?)"
+
+	sqldb := br.db.DB()
+	tx, _ := sqldb.Begin()
+	statement, _ := tx.Prepare(sqlStr)
+	for _, cardSource := range existsCardSourceList {
+		baseCardSource := cardSource.(*BaseCardSource)
+
+		csid, _ := json.Marshal(baseCardSource.CSID)
+		hash, _ := json.Marshal(baseCardSource.Hash)
+		block_i_ds, _ := json.Marshal(baseCardSource.Hash)
+		d_i_d, _ := json.Marshal(baseCardSource.DID)
+		c_type, _ := json.Marshal(baseCardSource.CType)
+		source_context, _ := json.Marshal(baseCardSource.SourceContext)
+		res, err := statement.Exec(csid, hash, block_i_ds, d_i_d, c_type, source_context)
+		if err != nil {
+			err.Error()
+			res.LastInsertId()
+		}
+	}
+	tx.Commit()
+	fmt.Printf("time insert before commit taken %s to insert len : %d \n", time.Since(start1), len(existsCardSourceList))
+
+	session := br.db.NewSession()
+	session.NoAutoCondition()
+	defer session.Close()
+	session.Begin()
+	start := time.Now()
+
+	// splitList := splitSlice(existsCardSourceList, 100)
+
+	// for _, subList := range splitList {
+	// 	_, err = session.Insert(&subList)
+	// 	if err != nil {
+	// 		err.Error()
+	// 	}
+	// }
+
+	for _, cardSource := range existsCardSourceList {
+		// session.Prepare()
+		_, err = session.Insert(cardSource)
+		if err != nil {
+			err.Error()
+		}
+	}
+
+	fmt.Printf("time insert before commit taken %s to insert len : %d", time.Since(start), len(existsCardSourceList))
+	err = session.Commit()
+	fmt.Printf("time insert taken %s to insert len : %d", time.Since(start), len(existsCardSourceList))
+	// _, err = br.db.Insert(&existsCardSourceList)
+
+	testList := make([]BaseCardSource, 0)
+	br.db.Find(&testList)
 	return
+}
+
+func splitSlice(slice []CardSource, chunkSize int) [][]CardSource {
+	var result [][]CardSource
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+		if end > len(slice) {
+			end = len(slice)
+		}
+		result = append(result, slice[i:end])
+	}
+	return result
 }
 
 func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	// 空实现
+	CSIDs := make([]string, 0)
+	existsCardList := make([]Card, 0)
+	for index := range cards {
+		cards[index].MarshalImpl()
+		CSIDs = append(CSIDs, cards[index].GetCSID())
+	}
+
+	existCSIDMap, err := batchCheck(
+		"base_card_source",
+		"c_s_i_d",
+		CSIDs,
+		br.db,
+	)
+
 	for _, card := range cards {
-		err = checkExist(br.db, &BaseCardSource{
-			CSID: card.GetCSID(),
-		})
-		if err != nil {
-			return cardList, err
+		if existCSIDMap[card.GetCSID()] {
+			existsCardList = append(existsCardList, card)
 		}
-		card.MarshalImpl()
-		_, err = br.db.Insert(card)
-		if err != nil {
-			return cardList, err
-		}
-		cardList = append(cardList, card)
+	}
+
+	br.db.Insert(&existsCardList)
+
+	return
+}
+
+func saveData(data interface{}, suffix, saveDirPath string) (err error) {
+	byteData, err := json.Marshal(data)
+	if err != nil {
+		logging.LogErrorf("marshal logs failed: %s", err)
+		return
+	}
+	savePath := path.Join(saveDirPath, "siyuan."+suffix)
+	err = filelock.WriteFile(savePath, byteData)
+	if err != nil {
+		logging.LogErrorf("write riff file failed: %s", err)
+		return
 	}
 	return
 }
 
-func (br *BaseRiff) Save(path string) error {
+func (br *BaseRiff) Save(path string) (err error) {
 	// 空实现
-	return nil
+
+	decks := make([]BaseDeck, 0)
+	cardSources := make([]BaseCardSource, 0)
+	cards := make([]BaseCard, 0)
+	err = br.db.Find(&decks)
+
+	if err != nil {
+		return
+	}
+
+	err = br.db.Find(&cardSources)
+
+	if err != nil {
+		return
+	}
+
+	err = br.db.Find(&cards)
+
+	if err != nil {
+		return
+	}
+
+	err = br.SaveHistory(path)
+
+	if err != nil {
+		return
+	}
+
+	if !gulu.File.IsDir(path) {
+		if err = os.MkdirAll(path, 0755); nil != err {
+			return
+		}
+	}
+	err = saveData(decks, "decks", path)
+	if err != nil {
+		return
+	}
+	err = saveData(cardSources, "cardSources", path)
+	if err != nil {
+		return
+	}
+
+	// card需要先反序列化Impl
+	for index := range cards {
+		cards[index].UnmarshalImpl()
+	}
+	err = saveData(cards, "cards", path)
+	if err != nil {
+		return
+	}
+
+	return
+}
+func (br *BaseRiff) SaveHistory(path string) (err error) {
+	historys := make([]BaseHistory, 0)
+	err = br.db.Find(&historys)
+	if err != nil {
+		return
+	}
+	err = saveData(historys, "history", path)
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (br *BaseRiff) Due() []Card {

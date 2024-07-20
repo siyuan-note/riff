@@ -24,8 +24,8 @@ import (
 func TestDeck(t *testing.T) {
 	const saveDir = "testdata"
 	const RequestRetention = 0.95
-	const cardSourceNum = 100
-	const preSourceCardNum = 10
+	const cardSourceNum = 100000
+	const preSourceCardNum = 3
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
 	riff := NewBaseRiff()
@@ -36,7 +36,9 @@ func TestDeck(t *testing.T) {
 		cs := NewBaseCardSource(deck.DID)
 		csList = append(csList, cs)
 		for i := 0; i < preSourceCardNum; i++ {
-			cardList = append(cardList, NewBaseCard(cs))
+			card := NewBaseCard(cs)
+			card.UseAlgo(AlgoFSRS)
+			cardList = append(cardList, card)
 		}
 	}
 
