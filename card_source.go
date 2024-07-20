@@ -20,6 +20,7 @@ func NewBaseCardSource(DID string) *BaseCardSource {
 	cardSource := &BaseCardSource{
 		CSID:          ID,
 		DID:           []string{DID},
+		BlockIDs:      []string{},
 		SourceContext: map[string]interface{}{},
 	}
 	return cardSource
