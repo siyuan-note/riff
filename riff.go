@@ -3,9 +3,11 @@ package riff
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/88250/gulu"
@@ -18,12 +20,12 @@ import (
 )
 
 type Riff interface {
-	Load(savePath string)
 	Query() []map[string]interface{}
 	QueryCard() []Card
 	AddDeck(deck Deck) (newDeck Deck, err error)
 	AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error)
 	AddCard(cards []Card) (cardList []Card, err error)
+	Load(savePath string) (err error)
 	Save(path string) error
 	Due() []Card
 	Review(card Card, rating Rating, RequestRetention float64)
@@ -50,10 +52,6 @@ func NewBaseRiff() Riff {
 		MinRequestRetention: 0.5,
 	}
 	return &riff
-}
-
-func (riff *BaseRiff) Load(savePath string) {
-	// data, err := filelock.ReadFile(savePath)
 }
 
 func (br *BaseRiff) Query() []map[string]interface{} {
@@ -187,6 +185,7 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 
 func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	// 空实现
+	start := time.Now()
 	CSIDs := make([]string, 0)
 	existsCardList := make([]Card, 0)
 	for index := range cards {
@@ -215,6 +214,7 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		// session.Prepare()
 		_, err = session.Insert(card)
 		if err != nil {
+			fmt.Printf("error on insert Card %s \n", err)
 			return
 		}
 	}
@@ -222,16 +222,17 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	err = session.Commit()
 	test := make([]BaseCard, 0)
 	br.db.Find(&test)
+	fmt.Printf("add card taken %s \n", time.Since(start))
 	return
 }
 
-func saveData(data interface{}, suffix, saveDirPath string) (err error) {
+func saveData(data interface{}, suffix SaveExt, saveDirPath string) (err error) {
 	byteData, err := json.Marshal(data)
 	if err != nil {
 		logging.LogErrorf("marshal logs failed: %s", err)
 		return
 	}
-	savePath := path.Join(saveDirPath, "siyuan."+suffix)
+	savePath := path.Join(saveDirPath, "siyuan"+string(suffix))
 	err = filelock.WriteFile(savePath, byteData)
 	if err != nil {
 		logging.LogErrorf("write riff file failed: %s", err)
@@ -275,11 +276,11 @@ func (br *BaseRiff) Save(path string) (err error) {
 			return
 		}
 	}
-	err = saveData(decks, "decks", path)
+	err = saveData(decks, DeckExt, path)
 	if err != nil {
 		return
 	}
-	err = saveData(cardSources, "cardSources", path)
+	err = saveData(cardSources, CardSourceExt, path)
 	if err != nil {
 		return
 	}
@@ -288,23 +289,80 @@ func (br *BaseRiff) Save(path string) (err error) {
 	for index := range cards {
 		cards[index].UnmarshalImpl()
 	}
-	err = saveData(cards, "cards", path)
+	err = saveData(cards, CardExt, path)
 	if err != nil {
 		return
 	}
 
 	return
 }
+
 func (br *BaseRiff) SaveHistory(path string) (err error) {
 	historys := make([]BaseHistory, 0)
 	err = br.db.Find(&historys)
 	if err != nil {
 		return
 	}
-	err = saveData(historys, "history", path)
+	err = saveData(historys, HistoryExt, path)
 	if err != nil {
 		return
 	}
+	return
+}
+
+func (br *BaseRiff) Load(savePath string) (err error) {
+	// data, err := filelock.ReadFile(savePath)
+	if !gulu.File.IsDir(savePath) {
+		return errors.New("no a save path")
+	}
+	totalDecks := make([]Deck, 0)
+	totalCards := make([]Card, 0)
+	totalCardSources := make([]CardSource, 0)
+	totalHistory := make([]BaseHistory, 0)
+	filelock.Walk(savePath, func(walkPath string, info fs.FileInfo, err error) (reErr error) {
+		if info.IsDir() {
+			return
+		}
+		ext := filepath.Ext(walkPath)
+		data, reErr := filelock.ReadFile(walkPath)
+		switch SaveExt(ext) {
+
+		case DeckExt:
+			decks := make([]BaseDeck, 0)
+			json.Unmarshal(data, &decks)
+			for _, deck := range decks {
+				totalDecks = append(totalDecks, &deck)
+			}
+
+		case CardExt:
+			cards := make([]BaseCard, 0)
+			json.Unmarshal(data, &cards)
+			for _, card := range cards {
+				totalCards = append(totalCards, &card)
+			}
+
+		case CardSourceExt:
+			cardSources := make([]BaseCardSource, 0)
+			json.Unmarshal(data, &cardSources)
+			for _, cardSource := range cardSources {
+				totalCardSources = append(totalCardSources, &cardSource)
+			}
+
+		case HistoryExt:
+			history := make([]BaseHistory, 0)
+			json.Unmarshal(data, &history)
+			totalHistory = append(totalHistory, history...)
+		}
+
+		return
+	})
+	for _, deck := range totalDecks {
+		br.AddDeck(deck)
+	}
+
+	br.AddCardSource(totalCardSources)
+	br.AddCard(totalCards)
+
 	return
 }
 
@@ -351,6 +409,15 @@ type Algo string
 const (
 	AlgoFSRS Algo = "fsrs"
 	AlgoSM2  Algo = "sm2"
+)
+
+type SaveExt string
+
+const (
+	CardExt       = ".cards"
+	CardSourceExt = ".cardSources"
+	DeckExt       = ".decks"
+	HistoryExt    = ".history"
 )
 
 // State 描述了闪卡的状态。
