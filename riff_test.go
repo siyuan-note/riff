@@ -109,10 +109,16 @@ func TestPerformance(t *testing.T) {
 		t.Errorf("%s", err)
 	}
 
-	reviewCard := riff.Due()
-	for _, card := range reviewCard {
-		riff.Review(card, Easy, RequestRetention)
+	reviewInfoList := riff.Due()
+	for _, reviewInfo := range reviewInfoList {
+		riff.Review(&reviewInfo.BaseCard, Again, RequestRetention)
 	}
+
+	reviewInfoList = riff.Due()
+	for _, reviewInfo := range reviewInfoList {
+		riff.Review(&reviewInfo.BaseCard, Easy, RequestRetention)
+	}
+
 	newreviewCard := riff.Due()
 	_ = len(newreviewCard)
 	riff.Save(saveDir)

@@ -30,14 +30,14 @@ type Riff interface {
 	AddCard(cards []Card) (cardList []Card, err error)
 	Load(savePath string) (err error)
 	Save(path string) error
-	Due() []Card
+	Due() []ReviewInfo
 	Review(card Card, rating Rating, RequestRetention float64)
 	CountCards() int
 	GetBlockIDs() (ret []string)
 }
 
 type BaseRiff struct {
-	db                  *xorm.Engine
+	Db                  *xorm.Engine
 	MaxRequestRetention float64
 	MinRequestRetention float64
 	lock                *sync.Mutex
@@ -47,13 +47,13 @@ type BaseRiff struct {
 
 func NewBaseRiff() Riff {
 	// orm, err := xorm.NewEngine("sqlite", ":memory:?_pragma=foreign_keys(1)")
-	orm, err := xorm.NewEngine("sqlite", "file::memory:?mode=memory&cache=shared&loc=auto")
+	orm, err := xorm.NewEngine("sqlite", ":memory:?mode=memory&cache=shared&loc=auto")
 	if err != nil {
 		return &BaseRiff{}
 	}
 	orm.Sync(new(BaseCard), new(BaseCardSource), new(BaseDeck), new(BaseHistory), new(ReviewLog))
 	riff := BaseRiff{
-		db:                  orm,
+		Db:                  orm,
 		MaxRequestRetention: 0.95,
 		MinRequestRetention: 0.5,
 		lock:                &sync.Mutex{},
@@ -79,7 +79,7 @@ func (br *BaseRiff) QueryCard() []Card {
 
 func (br *BaseRiff) AddDeck(deck Deck) (newDeck Deck, err error) {
 
-	_, err = br.db.Insert(deck)
+	_, err = br.Db.Insert(deck)
 	newDeck = deck
 	return
 }
@@ -138,7 +138,7 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		"base_deck",
 		"d_i_d",
 		DIDs,
-		br.db,
+		br.Db,
 	)
 
 	for _, cardSource := range cardSources {
@@ -154,7 +154,7 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		}
 	}
 
-	session := br.db.NewSession()
+	session := br.Db.NewSession()
 	defer session.Close()
 	session.Begin()
 
@@ -162,7 +162,10 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		// session.Prepare()
 		_, err = session.Insert(cardSource)
 		if err != nil {
-			return
+			fmt.Printf("error on insert CardSource %s \n", err)
+			// cs := make([]BaseCardSource, 0)
+			// br.Db.Find(&cs)
+			continue
 		}
 	}
 
@@ -188,7 +191,7 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		"base_card_source",
 		"c_s_i_d",
 		CSIDs,
-		br.db,
+		br.Db,
 	)
 
 	for _, card := range cards {
@@ -197,7 +200,7 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		}
 	}
 
-	session := br.db.NewSession()
+	session := br.Db.NewSession()
 	defer session.Close()
 	session.Begin()
 
@@ -206,16 +209,16 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		_, err = session.Insert(card)
 		if err != nil {
 			fmt.Printf("error on insert Card %s \n", err)
-			return
+			// cards := make([]BaseCard, 0)
+			// br.Db.Find(&cards)
+			continue
 		}
 	}
 
 	err = session.Commit()
 	test := make([]BaseCard, 0)
-	br.db.Find(&test)
-	testDue := br.Due()
-	_ = len(testDue)
-	// fmt.Printf("add card taken %s \n", time.Since(start))
+	br.Db.Find(&test)
+
 	return
 }
 
@@ -240,19 +243,19 @@ func (br *BaseRiff) Save(path string) (err error) {
 	decks := make([]BaseDeck, 0)
 	cardSources := make([]BaseCardSource, 0)
 	cards := make([]BaseCard, 0)
-	err = br.db.Find(&decks)
+	err = br.Db.Find(&decks)
 
 	if err != nil {
 		return
 	}
 
-	err = br.db.Find(&cardSources)
+	err = br.Db.Find(&cardSources)
 
 	if err != nil {
 		return
 	}
 
-	err = br.db.Find(&cards)
+	err = br.Db.Find(&cards)
 
 	if err != nil {
 		return
@@ -296,11 +299,10 @@ func saveHistoryData(data interface{}, suffix SaveExt, saveDirPath string, time 
 		logging.LogErrorf("marshal logs failed: %s", err)
 		return
 	}
-	yyyyMMddHHmmss := time.Format("2006-01-02-15:04:05")
+	yyyyMMddHHmmss := time.Format("2006-01-02-15_04_05")
 	savePath := path.Join(saveDirPath, yyyyMMddHHmmss+string(suffix))
 	err = filelock.WriteFile(savePath, byteData)
 	if err != nil {
-		logging.LogErrorf("write riff file failed: %s", err)
 		return
 	}
 	return
@@ -309,7 +311,16 @@ func saveHistoryData(data interface{}, suffix SaveExt, saveDirPath string, time 
 func (br *BaseRiff) SaveHistory(path string) (err error) {
 	historys := make([]BaseHistory, 0)
 	reviewLogs := make([]ReviewLog, 0)
-	err = br.db.Find(&historys)
+	err = br.Db.Find(&historys)
+	if err != nil {
+		return
+	}
+
+	for i := range historys {
+		historys[i].UnmarshalImpl()
+	}
+
+	err = br.Db.Find(&reviewLogs)
 	if err != nil {
 		return
 	}
@@ -319,7 +330,7 @@ func (br *BaseRiff) SaveHistory(path string) (err error) {
 	}
 	err = saveHistoryData(reviewLogs, reviewLogExt, path, br.startTime)
 	if err != nil {
-		logging.LogErrorf("write history file failed: %s", err)
+		logging.LogErrorf("write log file failed: %s", err)
 	}
 
 	if err != nil {
@@ -329,7 +340,7 @@ func (br *BaseRiff) SaveHistory(path string) (err error) {
 }
 
 func (br *BaseRiff) LoadHistory(historys []History, logs []ReviewLog) (err error) {
-	session := br.db.NewSession()
+	session := br.Db.NewSession()
 	defer session.Close()
 	session.Begin()
 
@@ -356,8 +367,8 @@ func (br *BaseRiff) LoadHistory(historys []History, logs []ReviewLog) (err error
 
 func (br *BaseRiff) Load(savePath string) (err error) {
 	// data, err := filelock.ReadFile(savePath)
-	br.lock.Lock()
-	defer br.lock.Unlock()
+	// br.lock.Lock()
+	// defer br.lock.Unlock()
 	if !gulu.File.IsDir(savePath) {
 		return errors.New("no a save path")
 	}
@@ -416,29 +427,37 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 	for _, deck := range totalDecks {
 		br.AddDeck(deck)
 	}
-
+	test := make([]BaseCard, 0)
+	br.Db.Find(&test)
 	br.AddCardSource(totalCardSources)
 	br.AddCard(totalCards)
 
+	// go br.LoadHistory(totalHistory, totalReviewLog)
 	go br.LoadHistory(totalHistory, totalReviewLog)
 	return
 
 }
 
-func (br *BaseRiff) Due() []Card {
+func (br *BaseRiff) Due() []ReviewInfo {
 	br.lock.Lock()
 	defer br.lock.Unlock()
-	cards := make([]Card, 0)
-	baseCards := make([]BaseCard, 0)
+
+	ris := make([]ReviewInfo, 0)
 	now := time.Now()
-	br.db.Where("due < ?", now).Find(&baseCards)
-	for _, bc := range baseCards {
-		copy := bc
-		copy.UnmarshalImpl()
-		cards = append(cards, &copy)
-		// baseCards[index].UnmarshalImpl()
+
+	err := br.Db.Table("base_card").
+		Select("base_card_source.*, base_card.*").
+		Join("INNER", "base_card_source", "base_card_source.c_s_i_d = base_card.c_s_i_d").
+		Where("base_card.due < ?", now).
+		Find(&ris)
+
+	if err != nil {
+		fmt.Printf("%s", err)
 	}
-	return cards
+	for i := range ris {
+		ris[i].UnmarshalImpl()
+	}
+	return ris
 }
 
 func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
@@ -446,8 +465,16 @@ func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
 
 	history := NewBaseHistory(card)
 	reviewlog := NewReviewLog(history, rating)
-	br.db.Insert(&history)
-	br.db.Insert(&reviewlog)
+	_, err := br.Db.Insert(history)
+	if err != nil {
+		logging.LogErrorf("error insert history %s \n", err)
+	}
+	_, err = br.Db.Insert(reviewlog)
+	if err != nil {
+		logging.LogErrorf("error insert reviewLog %s \n", err)
+	}
+	historys := make([]BaseHistory, 0)
+	br.Db.Find(&historys)
 
 	switch card.GetAlgo() {
 	case AlgoFSRS:
@@ -466,7 +493,8 @@ func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
 	default:
 		card.SetReps(card.GetReps() + 1)
 	}
-	_, err := br.db.Where("c_i_d = ?", card.ID()).Update(card)
+	card.MarshalImpl()
+	_, err = br.Db.Where("c_i_d = ?", card.ID()).Update(card)
 	if err != nil {
 		fmt.Printf("update card err:%s\n", err)
 	}
