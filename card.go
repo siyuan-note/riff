@@ -132,15 +132,15 @@ type BaseCard struct {
 	CID          string `xorm:"pk index"`
 	CSID         string
 	Update       time.Time
-	State        State
-	Lapses       int
-	Reps         int
-	Suspend      bool
+	State        State //State 返回闪卡状态。
+	Lapses       int   //Lapses 返回闪卡的遗忘次数。
+	Reps         int   //Reps 返回闪卡的复习次数。
+	Suspend      bool  `xorm:"index"`
 	Tag          string
 	Flag         string
 	Priority     float64
-	Due          time.Time
-	NDues        map[Rating]time.Time
+	Due          time.Time            `xorm:"index"`
+	NDues        map[Rating]time.Time `xorm:"-"`
 	Algo         Algo
 	AlgoImpl     interface{} `xorm:"-"`
 	AlgoImplData []uint8     `json:"-"`
