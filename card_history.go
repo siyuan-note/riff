@@ -15,7 +15,7 @@ type History interface {
 	// 对 Impl 进行 Marshal
 	MarshalImpl()
 
-	UnmarshalImpl()
+	UnmarshalImpl() (err error)
 }
 
 type BaseHistory struct {
@@ -29,7 +29,6 @@ type BaseHistory struct {
 	Suspend      bool
 	Priority     float64
 	Due          time.Time
-	NDues        map[Rating]time.Time
 	Algo         Algo
 	AlgoImpl     interface{} `xorm:"-"`
 	AlgoImplData []uint8     `json:"-"`
@@ -58,7 +57,6 @@ func NewBaseHistory(c Card) (history *BaseHistory) {
 		Suspend:      c.GetSuspend(),
 		Priority:     c.GetPriority(),
 		Due:          c.GetDue(),
-		NDues:        c.NextDues(), // 假设Card接口有NextDues方法
 		Algo:         c.GetAlgo(),
 		AlgoImpl:     c.Impl(),           // 假设Card接口有Impl方法
 		AlgoImplData: c.GetMarshalImpl(), // 假设Card接口有GetMarshalImpl方法
@@ -94,9 +92,9 @@ func (b *BaseHistory) MarshalImpl() {
 	b.AlgoImplData = data
 }
 
-func NewReviewLog(b History, rate Rating) (log *ReviewLog) {
+func NewReviewLog(h History, rate Rating) (log *ReviewLog) {
 	log = &ReviewLog{
-		HID:    b.ID(),
+		HID:    h.ID(),
 		Rate:   rate,
 		Review: time.Now(),
 	}
