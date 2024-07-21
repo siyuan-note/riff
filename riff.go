@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/88250/gulu"
@@ -37,6 +38,7 @@ type BaseRiff struct {
 	db                  *xorm.Engine
 	MaxRequestRetention float64
 	MinRequestRetention float64
+	lock                *sync.Mutex
 }
 
 func NewBaseRiff() Riff {
@@ -50,6 +52,7 @@ func NewBaseRiff() Riff {
 		db:                  orm,
 		MaxRequestRetention: 0.95,
 		MinRequestRetention: 0.5,
+		lock:                &sync.Mutex{},
 	}
 	return &riff
 }
@@ -177,15 +180,15 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 
 	err = session.Commit()
 
-	testList := make([]BaseCardSource, 0)
-	br.db.Find(&testList)
+	// testList := make([]BaseCardSource, 0)
+	// br.db.Find(&testList)
 
 	return
 }
 
 func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	// 空实现
-	start := time.Now()
+	// start := time.Now()
 	CSIDs := make([]string, 0)
 	existsCardList := make([]Card, 0)
 	for index := range cards {
@@ -220,9 +223,9 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	}
 
 	err = session.Commit()
-	test := make([]BaseCard, 0)
-	br.db.Find(&test)
-	fmt.Printf("add card taken %s \n", time.Since(start))
+	// test := make([]BaseCard, 0)
+	// br.db.Find(&test)
+	// fmt.Printf("add card taken %s \n", time.Since(start))
 	return
 }
 
@@ -312,6 +315,7 @@ func (br *BaseRiff) SaveHistory(path string) (err error) {
 
 func (br *BaseRiff) Load(savePath string) (err error) {
 	// data, err := filelock.ReadFile(savePath)
+	br.lock.Lock()
 	if !gulu.File.IsDir(savePath) {
 		return errors.New("no a save path")
 	}
@@ -362,12 +366,12 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 
 	br.AddCardSource(totalCardSources)
 	br.AddCard(totalCards)
-
+	br.lock.Unlock()
 	return
 }
 
 func (br *BaseRiff) Due() []Card {
-	// 空实现
+	br.lock.Lock()
 	cards := make([]Card, 0)
 	baseCards := make([]BaseCard, 0)
 	now := time.Now()
@@ -376,6 +380,7 @@ func (br *BaseRiff) Due() []Card {
 		UnmarshalImpl(&bc)
 		cards = append(cards, &bc)
 	}
+	br.lock.Unlock()
 	return cards
 }
 
