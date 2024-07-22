@@ -19,20 +19,20 @@ package riff
 import "time"
 
 type Deck interface {
-	AddCard(cardID, blockID string)
-	RemoveCard(cardID string)
-	SetCard(card Card)
-	GetCard(cardID string) Card
-	GetCardsByBlockID(blockID string) (ret []Card)
-	GetCardsByBlockIDs(blockIDs []string) (ret []Card)
-	GetNewCardsByBlockIDs(blockIDs []string) (ret []Card)
-	GetDueCardsByBlockIDs(blockIDs []string) (ret []Card)
-	GetBlockIDs() (ret []string)
-	CountCards() int
-	Save() (err error)
-	SaveLog(log *Log) (err error)
-	Review(cardID string, rating Rating) (ret *Log)
-	Dues() (ret []Card)
+	AddCard(cardID, blockID string)                       // FINISH
+	RemoveCard(cardID string)                             // TODO
+	SetCard(card Card)                                    // TODO
+	GetCard(cardID string) Card                           // TODO
+	GetCardsByBlockID(blockID string) (ret []Card)        // UNKNOW
+	GetCardsByBlockIDs(blockIDs []string) (ret []Card)    // INSTEAD OF BETTER
+	GetNewCardsByBlockIDs(blockIDs []string) (ret []Card) // INSTEAD OF BETTER
+	GetDueCardsByBlockIDs(blockIDs []string) (ret []Card) // INSTEAD OF BETTER
+	GetBlockIDs() (ret []string)                          // TODO
+	CountCards() int                                      // TODO
+	Save() (err error)                                    // FINISH
+	SaveLog(log *Log) (err error)                         // FINISH
+	Review(cardID string, rating Rating) (ret *Log)       // FINISH
+	Dues() (ret []Card)                                   // FINISH
 }
 
 // BaseDeck 描述了一套闪卡包。
