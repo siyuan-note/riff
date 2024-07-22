@@ -126,6 +126,35 @@ func batchCheck(table, field string, IDs []string, db xorm.Interface) (existMap 
 	return
 }
 
+func (br *BaseRiff) batchInsert(rowSlice interface{}) (err error) {
+	// 获取数据类型
+
+	br.lock.Lock()
+	defer br.lock.Unlock()
+
+	t := reflect.TypeOf(rowSlice)
+
+	// 检查是否是切片类型
+	if t.Kind() != reflect.Slice {
+		fmt.Println("Not a slice")
+		return
+	}
+	sliceValue := reflect.Indirect(reflect.ValueOf(rowSlice))
+	Len := sliceValue.Len()
+	session := br.Db.NewSession()
+	defer session.Close()
+	session.Begin()
+	for i := 0; i < Len; i++ {
+		_, err = session.Insert(sliceValue.Index(i).Interface())
+		if err != nil {
+			fmt.Printf("error on insert CardSource %s \n", err)
+			continue
+		}
+	}
+	err = session.Commit()
+	return
+}
+
 func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error) {
 
 	DIDs := make([]string, 0)
@@ -154,20 +183,7 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		}
 	}
 
-	session := br.Db.NewSession()
-	defer session.Close()
-	session.Begin()
-
-	for _, cardSource := range existsCardSourceList {
-		// session.Prepare()
-		_, err = session.Insert(cardSource)
-		if err != nil {
-			fmt.Printf("error on insert CardSource %s \n", err)
-			continue
-		}
-	}
-
-	err = session.Commit()
+	br.batchInsert(existsCardSourceList)
 
 	return
 }
@@ -195,20 +211,7 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		}
 	}
 
-	session := br.Db.NewSession()
-	defer session.Close()
-	session.Begin()
-
-	for _, card := range existsCardList {
-		// session.Prepare()
-		_, err = session.Insert(card)
-		if err != nil {
-			fmt.Printf("error on insert Card %s \n", err)
-			continue
-		}
-	}
-
-	err = session.Commit()
+	br.batchInsert(existsCardList)
 
 	return
 }
