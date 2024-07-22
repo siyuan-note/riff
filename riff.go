@@ -163,16 +163,11 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		_, err = session.Insert(cardSource)
 		if err != nil {
 			fmt.Printf("error on insert CardSource %s \n", err)
-			// cs := make([]BaseCardSource, 0)
-			// br.Db.Find(&cs)
 			continue
 		}
 	}
 
 	err = session.Commit()
-
-	// testList := make([]BaseCardSource, 0)
-	// br.db.Find(&testList)
 
 	return
 }
@@ -209,15 +204,11 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		_, err = session.Insert(card)
 		if err != nil {
 			fmt.Printf("error on insert Card %s \n", err)
-			// cards := make([]BaseCard, 0)
-			// br.Db.Find(&cards)
 			continue
 		}
 	}
 
 	err = session.Commit()
-	test := make([]BaseCard, 0)
-	br.Db.Find(&test)
 
 	return
 }
@@ -366,9 +357,9 @@ func (br *BaseRiff) LoadHistory(historys []History, logs []ReviewLog) (err error
 }
 
 func (br *BaseRiff) Load(savePath string) (err error) {
-	// data, err := filelock.ReadFile(savePath)
-	// br.lock.Lock()
-	// defer br.lock.Unlock()
+
+	br.lock.Lock()
+	defer br.lock.Unlock()
 	if !gulu.File.IsDir(savePath) {
 		return errors.New("no a save path")
 	}
@@ -427,8 +418,7 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 	for _, deck := range totalDecks {
 		br.AddDeck(deck)
 	}
-	test := make([]BaseCard, 0)
-	br.Db.Find(&test)
+
 	br.AddCardSource(totalCardSources)
 	br.AddCard(totalCards)
 
@@ -473,8 +463,6 @@ func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
 	if err != nil {
 		logging.LogErrorf("error insert reviewLog %s \n", err)
 	}
-	historys := make([]BaseHistory, 0)
-	br.Db.Find(&historys)
 
 	switch card.GetAlgo() {
 	case AlgoFSRS:
