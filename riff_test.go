@@ -108,7 +108,7 @@ func TestFunction(t *testing.T) {
 	queryCardList := []BaseCard{}
 
 	// 确保cardsource完全插入数据库
-	riff.(*BaseRiff).Db.Find(&queryCsList)
+	riff.Find(&queryCsList)
 	if len(queryCsList) != cardSourceNum {
 		t.Errorf("add CardSource err num %d:%d ", len(queryCsList), cardSourceNum)
 	}
@@ -119,7 +119,7 @@ func TestFunction(t *testing.T) {
 	}
 
 	// 确保card完全插入数据库
-	riff.(*BaseRiff).Db.Find(&queryCardList)
+	riff.Find(&queryCardList)
 	if len(queryCardList) != totalCardNum {
 		t.Errorf("add Card err num %d:%d ", len(queryCardList), totalCardNum)
 	}
@@ -154,7 +154,7 @@ func TestFunction(t *testing.T) {
 	queryCardList = []BaseCard{}
 
 	// 确保cardsource完全插入数据库
-	newRiff.(*BaseRiff).Db.Find(&queryCsList)
+	newRiff.Find(&queryCsList)
 	if len(queryCsList) != cardSourceNum {
 		t.Errorf("add CardSource err num %d:%d ", len(queryCsList), cardSourceNum)
 	}
@@ -165,7 +165,7 @@ func TestFunction(t *testing.T) {
 	}
 
 	// 确保card完全插入数据库
-	newRiff.(*BaseRiff).Db.Find(&queryCardList)
+	newRiff.Find(&queryCardList)
 	if len(queryCardList) != totalCardNum {
 		t.Errorf("add Card err num %d:%d ", len(queryCardList), totalCardNum)
 	}
@@ -236,7 +236,7 @@ func TestPerformance(t *testing.T) {
 	queryCardList := []BaseCard{}
 
 	// 确保cardsource完全插入数据库
-	riff.(*BaseRiff).Db.Find(&queryCsList)
+	riff.Find(&queryCsList)
 	if len(queryCsList) != cardSourceNum {
 		t.Errorf("add CardSource err num %d:%d ", len(queryCsList), cardSourceNum)
 	}
@@ -247,7 +247,7 @@ func TestPerformance(t *testing.T) {
 	}
 
 	// 确保card完全插入数据库
-	riff.(*BaseRiff).Db.Find(&queryCardList)
+	riff.Find(&queryCardList)
 	if len(queryCardList) != totalCardNum {
 		t.Errorf("add Card err num %d:%d ", len(queryCardList), totalCardNum)
 	}
@@ -276,7 +276,7 @@ func TestPerformance(t *testing.T) {
 	for _, reviewInfo := range reviewInfoList {
 		riff.Review(&reviewInfo.BaseCard, Easy, RequestRetention)
 	}
-	ticker.start("review again")
+	ticker.log("review again")
 
 	ticker.start("query due after review all")
 	newreviewCard := riff.Due()
@@ -303,7 +303,7 @@ func TestPerformance(t *testing.T) {
 
 	// 确保cardsource完全插入数据库
 	ticker.start("query total cardSource")
-	newRiff.(*BaseRiff).Db.Find(&queryCsList)
+	newRiff.Find(&queryCsList)
 	ticker.log("query total cardSource")
 
 	if len(queryCsList) != cardSourceNum {
@@ -317,7 +317,7 @@ func TestPerformance(t *testing.T) {
 
 	// 确保card完全插入数据库
 	ticker.start("query total card")
-	newRiff.(*BaseRiff).Db.Find(&queryCardList)
+	newRiff.Find(&queryCardList)
 	ticker.log("query total card")
 
 	if len(queryCardList) != totalCardNum {
@@ -330,5 +330,5 @@ func TestPerformance(t *testing.T) {
 		t.Errorf("%s", err)
 	}
 	ticker.log("TestPerformance")
-
+	time.Sleep(5 * time.Second)
 }
