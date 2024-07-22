@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"time"
 
@@ -78,7 +79,8 @@ func (br *BaseRiff) QueryCard() []Card {
 }
 
 func (br *BaseRiff) AddDeck(deck Deck) (newDeck Deck, err error) {
-
+	br.lock.Lock()
+	defer br.lock.Unlock()
 	_, err = br.Db.Insert(deck)
 	newDeck = deck
 	return
@@ -92,7 +94,10 @@ func checkExist(db xorm.Interface, data interface{}) error {
 	return nil
 }
 
-func batchCheck(table, field string, IDs []string, db xorm.Interface) (existMap map[string]bool, err error) {
+func (br *BaseRiff) batchCheck(table, field string, IDs []string) (existMap map[string]bool, err error) {
+
+	br.lock.Lock()
+	defer br.lock.Unlock()
 
 	const MAX_BATCH = 5000
 
@@ -107,7 +112,7 @@ func batchCheck(table, field string, IDs []string, db xorm.Interface) (existMap 
 			end = IDsLength
 		}
 		subIDs := IDs[i:end]
-		err = db.Table(table).
+		err = br.Db.Table(table).
 			In(field, subIDs).
 			Cols(field).
 			Find(&existsIDs)
@@ -163,11 +168,10 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		DIDs = append(DIDs, cardSources[index].GetDIDs()...)
 	}
 
-	existCSIDMap, err := batchCheck(
+	existCSIDMap, err := br.batchCheck(
 		"base_deck",
 		"d_i_d",
 		DIDs,
-		br.Db,
 	)
 
 	for _, cardSource := range cardSources {
@@ -191,6 +195,7 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 	// 空实现
 	// start := time.Now()
+
 	CSIDs := make([]string, 0)
 	existsCardList := make([]Card, 0)
 	for index := range cards {
@@ -198,11 +203,10 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 		CSIDs = append(CSIDs, cards[index].GetCSID())
 	}
 
-	existCSIDMap, err := batchCheck(
+	existCSIDMap, err := br.batchCheck(
 		"base_card_source",
 		"c_s_i_d",
 		CSIDs,
-		br.Db,
 	)
 
 	for _, card := range cards {
