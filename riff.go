@@ -347,29 +347,39 @@ func (br *BaseRiff) SaveHistory(path string) (err error) {
 	return
 }
 
-func (br *BaseRiff) LoadHistory(historys []History, logs []ReviewLog) (err error) {
-	session := br.Db.NewSession()
-	defer session.Close()
-	session.Begin()
-
-	for _, history := range historys {
-		// session.Prepare()
-		_, err = session.Insert(history)
-		if err != nil {
-			fmt.Printf("error on insert history %s \n", err)
-			continue
-		}
-	}
-	for _, log := range logs {
-		// session.Prepare()
-		_, err = session.Insert(log)
-		if err != nil {
-			fmt.Printf("error on insert log %s \n", err)
-			continue
-		}
+func (br *BaseRiff) LoadHistory(savePath string) (err error) {
+	if !gulu.File.IsDir(savePath) {
+		return errors.New("no a save path")
 	}
 
-	err = session.Commit()
+	totalHistory := make([]History, 0)
+	totalReviewLog := make([]ReviewLog, 0)
+
+	filelock.Walk(savePath, func(walkPath string, info fs.FileInfo, err error) (reErr error) {
+		if info.IsDir() {
+			return
+		}
+		ext := filepath.Ext(walkPath)
+		data, reErr := filelock.ReadFile(walkPath)
+		switch SaveExt(ext) {
+
+		case HistoryExt:
+			historys := make([]BaseHistory, 0)
+			json.Unmarshal(data, &historys)
+			for _, history := range historys {
+				copy := history
+				totalHistory = append(totalHistory, &copy)
+			}
+		case reviewLogExt:
+			reviewLog := make([]ReviewLog, 0)
+			json.Unmarshal(data, &reviewLog)
+			totalReviewLog = append(totalReviewLog, reviewLog...)
+		}
+
+		return
+	})
+	br.batchInsert(totalHistory)
+	br.batchInsert(totalReviewLog)
 	return
 }
 
@@ -381,8 +391,7 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 	totalDecks := make([]Deck, 0)
 	totalCards := make([]Card, 0)
 	totalCardSources := make([]CardSource, 0)
-	totalHistory := make([]History, 0)
-	totalReviewLog := make([]ReviewLog, 0)
+
 	filelock.Walk(savePath, func(walkPath string, info fs.FileInfo, err error) (reErr error) {
 		if info.IsDir() {
 			return
@@ -415,18 +424,6 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 				copy := cardSource
 				totalCardSources = append(totalCardSources, &copy)
 			}
-
-		case HistoryExt:
-			historys := make([]BaseHistory, 0)
-			json.Unmarshal(data, &historys)
-			for _, history := range historys {
-				copy := history
-				totalHistory = append(totalHistory, &copy)
-			}
-		case reviewLogExt:
-			reviewLog := make([]ReviewLog, 0)
-			json.Unmarshal(data, &reviewLog)
-			totalReviewLog = append(totalReviewLog, reviewLog...)
 		}
 
 		return
@@ -438,8 +435,7 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 	br.AddCardSource(totalCardSources)
 	br.AddCard(totalCards)
 
-	// go br.LoadHistory(totalHistory, totalReviewLog)
-	go br.LoadHistory(totalHistory, totalReviewLog)
+	go br.LoadHistory(savePath)
 	return
 
 }
