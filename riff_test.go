@@ -22,9 +22,28 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/open-spaced-repetition/go-fsrs"
 )
+
+type timeTicker struct {
+	totalTicker map[string]time.Time
+}
+
+func newTimeTicker() *timeTicker {
+	return &timeTicker{
+		totalTicker: map[string]time.Time{},
+	}
+}
+
+func (tt *timeTicker) start(task string) {
+	tt.totalTicker[task] = time.Now()
+}
+func (tt *timeTicker) log(task string) {
+	since := time.Since(tt.totalTicker[task])
+	fmt.Printf("task %s use time :%s\n", task, since)
+}
 
 func checkIDList(IDList []string, data interface{}, dataGetter func(item interface{}) string) (err error) {
 	queryIDs := map[string]bool{}
@@ -43,12 +62,14 @@ func checkIDList(IDList []string, data interface{}, dataGetter func(item interfa
 	return
 }
 
-func TestPerformance(t *testing.T) {
+// 检查功能是否正确实现
+func TestFunction(t *testing.T) {
 	const saveDir = "testdata"
 	const RequestRetention = 0.95
-	const cardSourceNum = 1
+	const cardSourceNum = 1000
 	const preSourceCardNum = 3
 	const totalCardNum = cardSourceNum * preSourceCardNum
+
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
 	riff := NewBaseRiff()
@@ -154,5 +175,160 @@ func TestPerformance(t *testing.T) {
 	}); err != nil {
 		t.Errorf("%s", err)
 	}
+
+}
+
+// 检查性能参数
+// 10000 cardSOurce,
+// 30 card
+func TestPerformance(t *testing.T) {
+	ticker := newTimeTicker()
+	ticker.start("TestPerformance")
+
+	const saveDir = "testdata"
+	const RequestRetention = 0.95
+	const cardSourceNum = 20000
+	const preSourceCardNum = 5
+	const totalCardNum = cardSourceNum * preSourceCardNum
+
+	os.MkdirAll(saveDir, 0755)
+	defer os.RemoveAll(saveDir)
+
+	riff := NewBaseRiff()
+	riff.SetParams(AlgoFSRS, fsrs.DefaultParam())
+	deck := DefaultBaseDeck()
+
+	csList := []CardSource{}
+	cardList := []Card{}
+	csIDList := []string{}
+	cardIDList := []string{}
+	ticker.start("init card and cardsource")
+	for i := 0; i < cardSourceNum; i++ {
+		cs := NewBaseCardSource(deck.DID)
+		csList = append(csList, cs)
+		csIDList = append(csIDList, cs.CSID)
+		if i%10 == 0 {
+			time.Sleep(1 * time.Microsecond)
+		}
+		for i := 0; i < preSourceCardNum; i++ {
+			card := NewBaseCard(cs)
+			card.UseAlgo(AlgoFSRS)
+			cardList = append(cardList, card)
+			cardIDList = append(cardIDList, card.CID)
+
+		}
+	}
+	ticker.log("init card and cardsource")
+
+	ticker.start("adddeck")
+	riff.AddDeck(deck)
+	ticker.log("adddeck")
+
+	ticker.start("add cardSource")
+	riff.AddCardSource(csList)
+	ticker.log("add cardSource")
+
+	ticker.start("add card")
+	riff.AddCard(cardList)
+	ticker.log("add card")
+
+	queryCsList := []BaseCardSource{}
+	queryCardList := []BaseCard{}
+
+	// 确保cardsource完全插入数据库
+	riff.(*BaseRiff).Db.Find(&queryCsList)
+	if len(queryCsList) != cardSourceNum {
+		t.Errorf("add CardSource err num %d:%d ", len(queryCsList), cardSourceNum)
+	}
+	if err := checkIDList(csIDList, queryCsList, func(item interface{}) string {
+		return item.(BaseCardSource).CSID
+	}); err != nil {
+		t.Errorf("%s", err)
+	}
+
+	// 确保card完全插入数据库
+	riff.(*BaseRiff).Db.Find(&queryCardList)
+	if len(queryCardList) != totalCardNum {
+		t.Errorf("add Card err num %d:%d ", len(queryCardList), totalCardNum)
+	}
+
+	if err := checkIDList(cardIDList, queryCardList, func(item interface{}) string {
+		return item.(BaseCard).CID
+	}); err != nil {
+		t.Errorf("%s", err)
+	}
+
+	ticker.start("query due")
+	reviewInfoList := riff.Due()
+	ticker.log("query due")
+
+	ticker.start("review")
+	for _, reviewInfo := range reviewInfoList {
+		riff.Review(&reviewInfo.BaseCard, Again, RequestRetention)
+	}
+	ticker.log("review")
+
+	ticker.start("query due again")
+	reviewInfoList = riff.Due()
+	ticker.log("query due again")
+
+	ticker.start("review again")
+	for _, reviewInfo := range reviewInfoList {
+		riff.Review(&reviewInfo.BaseCard, Easy, RequestRetention)
+	}
+	ticker.start("review again")
+
+	ticker.start("query due after review all")
+	newreviewCard := riff.Due()
+	ticker.log("query due after review all")
+
+	if len(newreviewCard) != 0 {
+		t.Errorf("review error with un review card num :%d\n", len(newreviewCard))
+	}
+
+	ticker.start("save")
+	riff.Save(saveDir)
+	ticker.log("save")
+
+	ticker.start("load")
+	newRiff := NewBaseRiff()
+	newRiff.SetParams(AlgoFSRS, fsrs.DefaultParam())
+	newRiff.Load(saveDir)
+	ticker.log("load")
+
+	// 检查重新加载后 数据是否恢复
+
+	queryCsList = []BaseCardSource{}
+	queryCardList = []BaseCard{}
+
+	// 确保cardsource完全插入数据库
+	ticker.start("query total cardSource")
+	newRiff.(*BaseRiff).Db.Find(&queryCsList)
+	ticker.log("query total cardSource")
+
+	if len(queryCsList) != cardSourceNum {
+		t.Errorf("add CardSource err num %d:%d ", len(queryCsList), cardSourceNum)
+	}
+	if err := checkIDList(csIDList, queryCsList, func(item interface{}) string {
+		return item.(BaseCardSource).CSID
+	}); err != nil {
+		t.Errorf("%s", err)
+	}
+
+	// 确保card完全插入数据库
+	ticker.start("query total card")
+	newRiff.(*BaseRiff).Db.Find(&queryCardList)
+	ticker.log("query total card")
+
+	if len(queryCardList) != totalCardNum {
+		t.Errorf("add Card err num %d:%d ", len(queryCardList), totalCardNum)
+	}
+
+	if err := checkIDList(cardIDList, queryCardList, func(item interface{}) string {
+		return item.(BaseCard).CID
+	}); err != nil {
+		t.Errorf("%s", err)
+	}
+	ticker.log("TestPerformance")
 
 }
