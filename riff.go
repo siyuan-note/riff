@@ -25,6 +25,9 @@ import (
 type Riff interface {
 	Query() []map[string]interface{}
 	QueryCard() []Card
+
+	// 底层 xorm DB的 Find 加锁包装
+	Find(beans interface{}, condiBeans ...interface{}) error
 	SetParams(algo Algo, params interface{})
 	AddDeck(deck Deck) (newDeck Deck, err error)
 	AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error)
@@ -235,25 +238,32 @@ func saveData(data interface{}, suffix SaveExt, saveDirPath string) (err error) 
 	return
 }
 
+func (br *BaseRiff) Find(beans interface{}, condiBeans ...interface{}) error {
+	br.lock.Lock()
+	defer br.lock.Unlock()
+	err := br.Db.Find(beans, condiBeans...)
+	return err
+}
+
 func (br *BaseRiff) Save(path string) (err error) {
 	// 空实现
 
 	decks := make([]BaseDeck, 0)
 	cardSources := make([]BaseCardSource, 0)
 	cards := make([]BaseCard, 0)
-	err = br.Db.Find(&decks)
+	err = br.Find(&decks)
 
 	if err != nil {
 		return
 	}
 
-	err = br.Db.Find(&cardSources)
+	err = br.Find(&cardSources)
 
 	if err != nil {
 		return
 	}
 
-	err = br.Db.Find(&cards)
+	err = br.Find(&cards)
 
 	if err != nil {
 		return
@@ -309,7 +319,7 @@ func saveHistoryData(data interface{}, suffix SaveExt, saveDirPath string, time 
 func (br *BaseRiff) SaveHistory(path string) (err error) {
 	historys := make([]BaseHistory, 0)
 	reviewLogs := make([]ReviewLog, 0)
-	err = br.Db.Find(&historys)
+	err = br.Find(&historys)
 	if err != nil {
 		return
 	}
@@ -318,7 +328,7 @@ func (br *BaseRiff) SaveHistory(path string) (err error) {
 		historys[i].UnmarshalImpl()
 	}
 
-	err = br.Db.Find(&reviewLogs)
+	err = br.Find(&reviewLogs)
 	if err != nil {
 		return
 	}
@@ -365,8 +375,6 @@ func (br *BaseRiff) LoadHistory(historys []History, logs []ReviewLog) (err error
 
 func (br *BaseRiff) Load(savePath string) (err error) {
 
-	br.lock.Lock()
-	defer br.lock.Unlock()
 	if !gulu.File.IsDir(savePath) {
 		return errors.New("no a save path")
 	}
@@ -380,6 +388,7 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 			return
 		}
 		ext := filepath.Ext(walkPath)
+		// 后期性能改进点：把读文件位置后移
 		data, reErr := filelock.ReadFile(walkPath)
 		switch SaveExt(ext) {
 
