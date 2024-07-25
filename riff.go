@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/88250/gulu"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/open-spaced-repetition/go-fsrs"
 
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
 )
 
@@ -51,7 +51,7 @@ type BaseRiff struct {
 
 func NewBaseRiff() Riff {
 	// orm, err := xorm.NewEngine("sqlite", ":memory:?_pragma=foreign_keys(1)")
-	orm, err := xorm.NewEngine("sqlite", ":memory:?mode=memory&cache=shared&loc=auto")
+	orm, err := xorm.NewEngine("sqlite3", ":memory:?mode=memory&cache=shared&loc=auto")
 	if err != nil {
 		return &BaseRiff{}
 	}

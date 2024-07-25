@@ -22,7 +22,6 @@ import (
 
 	"github.com/open-spaced-repetition/go-fsrs"
 	"github.com/siyuan-note/logging"
-	_ "modernc.org/sqlite"
 )
 
 // Card 描述了闪卡。
