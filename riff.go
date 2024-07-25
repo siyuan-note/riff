@@ -35,18 +35,20 @@ type Riff interface {
 	Load(savePath string) (err error)
 	Save(path string) error
 	Due() []ReviewInfo
-	Review(card Card, rating Rating, RequestRetention float64)
+	// Review(card Card, rating Rating, RequestRetention float64)
+	Review(cardID string, rating Rating)
 	CountCards() int
 	GetBlockIDs() (ret []string)
 }
 
 type BaseRiff struct {
-	Db                  *xorm.Engine
-	MaxRequestRetention float64
-	MinRequestRetention float64
-	lock                *sync.Mutex
-	startTime           time.Time
-	ParamsMap           map[Algo]interface{}
+	Db                     *xorm.Engine
+	GlobalRequestRetention float64
+	MaxRequestRetention    float64
+	MinRequestRetention    float64
+	lock                   *sync.Mutex
+	startTime              time.Time
+	ParamsMap              map[Algo]interface{}
 }
 
 func NewBaseRiff() Riff {
@@ -57,12 +59,13 @@ func NewBaseRiff() Riff {
 	}
 	orm.Sync(new(BaseCard), new(BaseCardSource), new(BaseDeck), new(BaseHistory), new(ReviewLog))
 	riff := BaseRiff{
-		Db:                  orm,
-		MaxRequestRetention: 0.95,
-		MinRequestRetention: 0.5,
-		lock:                &sync.Mutex{},
-		startTime:           time.Now(),
-		ParamsMap:           map[Algo]interface{}{},
+		Db:                     orm,
+		GlobalRequestRetention: 0.900,
+		MaxRequestRetention:    0.999,
+		MinRequestRetention:    0.500,
+		lock:                   &sync.Mutex{},
+		startTime:              time.Now(),
+		ParamsMap:              map[Algo]interface{}{},
 	}
 	return &riff
 }
@@ -242,6 +245,13 @@ func (br *BaseRiff) Find(beans interface{}, condiBeans ...interface{}) error {
 	br.lock.Lock()
 	defer br.lock.Unlock()
 	err := br.Db.Find(beans, condiBeans...)
+	return err
+}
+
+func (br *BaseRiff) Get(beans ...interface{}) error {
+	br.lock.Lock()
+	defer br.lock.Unlock()
+	_, err := br.Db.Get(beans...)
 	return err
 }
 
@@ -462,7 +472,9 @@ func (br *BaseRiff) Due() []ReviewInfo {
 	return ris
 }
 
-func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
+func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float64) {
+	br.lock.Lock()
+	defer br.lock.Unlock()
 	now := time.Now()
 
 	history := NewBaseHistory(card)
@@ -498,6 +510,28 @@ func (br *BaseRiff) Review(card Card, rating Rating, RequestRetention float64) {
 	if err != nil {
 		fmt.Printf("update card err:%s\n", err)
 	}
+}
+
+func (br *BaseRiff) Review(cardID string, rating Rating) {
+	card := BaseCard{
+		CID: cardID,
+	}
+	br.Get(&card)
+	card.UnmarshalImpl()
+	RequestRetention := br.getRequestRetention(&card)
+	br.innerReview(&card, rating, RequestRetention)
+
+}
+func (br *BaseRiff) getRequestRetention(card Card) float64 {
+	priority := card.GetPriority()
+	requestRetention := br.GlobalRequestRetention
+	switch {
+	case priority >= 0 && priority <= 0.5:
+		requestRetention = (br.GlobalRequestRetention - br.MinRequestRetention) / (0.5 - 0) * (priority - 0)
+	case priority > 0.5 && priority <= 1:
+		requestRetention = (br.MaxRequestRetention - br.GlobalRequestRetention) / (1 - 0.5) * (priority - 0.5)
+	}
+	return requestRetention
 }
 
 func (br *BaseRiff) CountCards() int {

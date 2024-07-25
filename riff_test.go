@@ -132,12 +132,12 @@ func TestFunction(t *testing.T) {
 
 	reviewInfoList := riff.Due()
 	for _, reviewInfo := range reviewInfoList {
-		riff.Review(&reviewInfo.BaseCard, Again, RequestRetention)
+		riff.Review(reviewInfo.BaseCard.ID(), Again)
 	}
 
 	reviewInfoList = riff.Due()
 	for _, reviewInfo := range reviewInfoList {
-		riff.Review(&reviewInfo.BaseCard, Easy, RequestRetention)
+		riff.Review(reviewInfo.BaseCard.ID(), Easy)
 	}
 
 	newreviewCard := riff.Due()
@@ -264,7 +264,7 @@ func TestPerformance(t *testing.T) {
 
 	ticker.start("review")
 	for _, reviewInfo := range reviewInfoList {
-		riff.Review(&reviewInfo.BaseCard, Again, RequestRetention)
+		riff.Review(reviewInfo.BaseCard.ID(), Again)
 	}
 	ticker.log("review")
 
@@ -274,7 +274,7 @@ func TestPerformance(t *testing.T) {
 
 	ticker.start("review again")
 	for _, reviewInfo := range reviewInfoList {
-		riff.Review(&reviewInfo.BaseCard, Easy, RequestRetention)
+		riff.Review(reviewInfo.BaseCard.ID(), Easy)
 	}
 	ticker.log("review again")
 
