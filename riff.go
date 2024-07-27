@@ -36,6 +36,7 @@ type Riff interface {
 	Save(path string) error
 	Due() []ReviewInfo
 	// Review(card Card, rating Rating, RequestRetention float64)
+	GetCardsByBlockIDs(blockIDs []string) (ret []ReviewInfo)
 	Review(cardID string, rating Rating)
 	CountCards() int
 	GetBlockIDs() (ret []string)
@@ -470,6 +471,45 @@ func (br *BaseRiff) Due() []ReviewInfo {
 		ris[i].UnmarshalImpl()
 	}
 	return ris
+}
+
+func (br *BaseRiff) GetCardsByBlockIDs(blockIDs []string) (ret []ReviewInfo) {
+	br.lock.Lock()
+	defer br.lock.Unlock()
+	ret = make([]ReviewInfo, 0)
+	// bscs := make([]BaseCardSource, 0)
+
+	reviewInfo := new(ReviewInfo)
+	rows, err := br.Db.Table("base_card").
+		Join("inner", "base_card_source", "base_card.c_s_i_d = base_card_source.c_s_i_d").
+		Rows(reviewInfo)
+	if err != nil {
+		return
+	}
+	queryBlockIDs := make(map[string]bool, 0)
+	for _, blockID := range blockIDs {
+		queryBlockIDs[blockID] = true
+	}
+	for rows.Next() {
+		reviewInfo := new(ReviewInfo)
+		existsNum := 0
+		rows.Scan(reviewInfo)
+		for _, blockID := range reviewInfo.BlockIDs {
+			if queryBlockIDs[blockID] {
+				existsNum += 1
+			}
+		}
+		if existsNum > 0 {
+			ret = append(ret, *reviewInfo)
+		}
+	}
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	for i := range ret {
+		ret[i].UnmarshalImpl()
+	}
+	return
 }
 
 func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float64) {

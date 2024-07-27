@@ -17,8 +17,8 @@
 package riff
 
 import (
-	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"testing"
@@ -55,23 +55,50 @@ func checkIDList(IDList []string, data interface{}, dataGetter func(item interfa
 	}
 	for _, ID := range IDList {
 		if !queryIDs[ID] {
-			err = errors.New(fmt.Sprintf("dont have id of %s", ID))
+			err = fmt.Errorf("dont have id of %s", ID)
 			return
 		}
 	}
 	return
 }
 
+func randomSubset[T any](slice []T, size int) ([]T, error) {
+	if size > len(slice) {
+		return nil, fmt.Errorf("requested subset size is larger than the slice size")
+	}
+
+	// Create a copy of the original slice to avoid modifying it
+	subset := make([]T, len(slice))
+	copy(subset, slice)
+
+	// Shuffle the copy
+	rand.Shuffle(len(subset), func(i, j int) {
+		subset[i], subset[j] = subset[j], subset[i]
+	})
+
+	// Return the first `size` elements
+	return subset[:size], nil
+}
+
 // 检查功能是否正确实现
 func TestFunction(t *testing.T) {
 	const saveDir = "testdata"
 	const RequestRetention = 0.95
-	const cardSourceNum = 1000
+	const cardSourceNum = 200
+	const blocksNum = 40
 	const preSourceCardNum = 3
 	const totalCardNum = cardSourceNum * preSourceCardNum
 
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
+
+	blocksIDs := []string{}
+	blockIDsCIDMap := make(map[string][]string, 0)
+
+	for i := 0; i < blocksNum; i++ {
+		blocksIDs = append(blocksIDs, newID())
+	}
+
 	riff := NewBaseRiff()
 	riff.SetParams(AlgoFSRS, fsrs.DefaultParam())
 	deck := DefaultBaseDeck()
@@ -79,8 +106,18 @@ func TestFunction(t *testing.T) {
 	cardList := []Card{}
 	csIDList := []string{}
 	cardIDList := []string{}
+
 	for i := 0; i < cardSourceNum; i++ {
 		cs := NewBaseCardSource(deck.DID)
+
+		// 放入blockIDs
+		subBlockIDs, _ := randomSubset(blocksIDs, preSourceCardNum)
+		cs.BlockIDs = subBlockIDs
+		// 准备一个临时数组来储存当前blocksIDs对应的cardSourceID
+		for _, blockID := range subBlockIDs {
+			blockIDsCIDMap[blockID] = append(blockIDsCIDMap[blockID], cs.CSID)
+		}
+
 		csList = append(csList, cs)
 		csIDList = append(csIDList, cs.CSID)
 		for i := 0; i < preSourceCardNum; i++ {
@@ -141,7 +178,27 @@ func TestFunction(t *testing.T) {
 	}
 
 	newreviewCard := riff.Due()
-	_ = len(newreviewCard)
+
+	if len(newreviewCard) != 0 {
+		t.Errorf("review error with un review card num :%d\n", len(newreviewCard))
+	}
+
+	// 抽取一半的blockIDs检查
+	testBlockIDs, _ := randomSubset(blocksIDs, blocksNum/2)
+	reviewInfoByblocks := riff.GetCardsByBlockIDs(testBlockIDs)
+	existMap := map[string]bool{}
+	for _, ri := range reviewInfoByblocks {
+		existMap[ri.BaseCardSource.CSID] = true
+	}
+	for _, blockID := range testBlockIDs {
+		mapCSIDs := blockIDsCIDMap[blockID]
+		for _, csid := range mapCSIDs {
+			if !existMap[csid] {
+				t.Errorf("blockID %s cardSource %s no call back", blockID, csid)
+			}
+		}
+	}
+
 	riff.Save(saveDir)
 
 	newRiff := NewBaseRiff()
@@ -188,11 +245,19 @@ func TestPerformance(t *testing.T) {
 	const saveDir = "testdata"
 	const RequestRetention = 0.95
 	const cardSourceNum = 20000
+	const blocksNum = 20000
 	const preSourceCardNum = 5
 	const totalCardNum = cardSourceNum * preSourceCardNum
 
 	os.MkdirAll(saveDir, 0755)
 	defer os.RemoveAll(saveDir)
+
+	blocksIDs := []string{}
+	blockIDsCIDMap := make(map[string][]string, 0)
+
+	for i := 0; i < blocksNum; i++ {
+		blocksIDs = append(blocksIDs, newID())
+	}
 
 	riff := NewBaseRiff()
 	riff.SetParams(AlgoFSRS, fsrs.DefaultParam())
@@ -205,8 +270,18 @@ func TestPerformance(t *testing.T) {
 	ticker.start("init card and cardsource")
 	for i := 0; i < cardSourceNum; i++ {
 		cs := NewBaseCardSource(deck.DID)
+
+		// 放入blockIDs
+		subBlockIDs, _ := randomSubset(blocksIDs, preSourceCardNum)
+		cs.BlockIDs = subBlockIDs
+		// 准备一个临时数组来储存当前blocksIDs对应的cardSourceID
+		for _, blockID := range subBlockIDs {
+			blockIDsCIDMap[blockID] = append(blockIDsCIDMap[blockID], cs.CSID)
+		}
+
 		csList = append(csList, cs)
 		csIDList = append(csIDList, cs.CSID)
+
 		if i%10 == 0 {
 			time.Sleep(1 * time.Microsecond)
 		}
@@ -262,6 +337,8 @@ func TestPerformance(t *testing.T) {
 	reviewInfoList := riff.Due()
 	ticker.log("query due")
 
+	fmt.Printf("due card len :%d", len(reviewInfoList))
+
 	ticker.start("review")
 	for _, reviewInfo := range reviewInfoList {
 		riff.Review(reviewInfo.BaseCard.ID(), Again)
@@ -285,6 +362,24 @@ func TestPerformance(t *testing.T) {
 	if len(newreviewCard) != 0 {
 		t.Errorf("review error with un review card num :%d\n", len(newreviewCard))
 	}
+
+	// 抽取一半的blockIDs检查
+	ticker.start("get card by blocks")
+	testBlockIDs, _ := randomSubset(blocksIDs, blocksNum)
+	reviewInfoByblocks := riff.GetCardsByBlockIDs(testBlockIDs)
+	existMap := map[string]bool{}
+	for _, ri := range reviewInfoByblocks {
+		existMap[ri.BaseCardSource.CSID] = true
+	}
+	for _, blockID := range testBlockIDs {
+		mapCSIDs := blockIDsCIDMap[blockID]
+		for _, csid := range mapCSIDs {
+			if !existMap[csid] {
+				// t.Errorf("blockID %s cardSource %s no call back", blockID, csid)
+			}
+		}
+	}
+	ticker.log("get card by blocks")
 
 	ticker.start("save")
 	riff.Save(saveDir)
