@@ -33,6 +33,7 @@ type Deck interface {
 	SaveLog(log *Log) (err error)                         // FINISH
 	Review(cardID string, rating Rating) (ret *Log)       // FINISH
 	Dues() (ret []Card)                                   // FINISH
+	GetDID() string
 }
 
 // BaseDeck 描述了一套闪卡包。
@@ -142,4 +143,7 @@ func (bd *BaseDeck) Review(cardID string, rating Rating) (ret *Log) {
 func (bd *BaseDeck) Dues() (ret []Card) {
 	// 空实现
 	return nil
+}
+func (bd *BaseDeck) GetDID() string {
+	return bd.DID
 }
