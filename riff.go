@@ -33,6 +33,8 @@ type Riff interface {
 	AddCardSource(cardSources []CardSource) (cardSourceList []CardSource, err error)
 	AddCard(cards []Card) (cardList []Card, err error)
 	Load(savePath string) (err error)
+	//WaitLoad会等待至从磁盘加载完成
+	WaitLoad() (err error)
 	Save(path string) error
 	Due() []ReviewInfo
 	// Review(card Card, rating Rating, RequestRetention float64)
@@ -412,6 +414,8 @@ func (br *BaseRiff) LoadHistory(savePath string) (err error) {
 }
 
 func (br *BaseRiff) Load(savePath string) (err error) {
+	br.load.Lock()
+	defer br.load.Unlock()
 
 	if !gulu.File.IsDir(savePath) {
 		return errors.New("no a save path")
@@ -468,11 +472,11 @@ func (br *BaseRiff) Load(savePath string) (err error) {
 
 }
 
-func (br *BaseRiff) Due() []ReviewInfo {
-	br.lock.Lock()
-	defer br.lock.Unlock()
-
-	ris := make([]ReviewInfo, 0)
+func (br *BaseRiff) WaitLoad() (err error) {
+	br.load.Lock()
+	defer br.load.Unlock()
+	return
+}
 
 func (br *BaseRiff) Due() (ret []ReviewInfo) {
 	now := time.Now()
