@@ -127,14 +127,6 @@ func (br *BaseRiff) AddDeck(deck Deck) (newDeck Deck, err error) {
 	return
 }
 
-func checkExist(db xorm.Interface, data interface{}) error {
-	exist, err := db.Exist(data)
-	if !exist || err != nil {
-		return errors.New("forgin no exist")
-	}
-	return nil
-}
-
 func (br *BaseRiff) batchCheck(table, field string, IDs []string) (existMap map[string]bool, err error) {
 
 	br.lock.Lock()
