@@ -40,33 +40,64 @@ type Riff interface {
 	Review(cardID string, rating Rating)
 	CountCards() int
 	GetBlockIDs() (ret []string)
+
+	//SetDeck设置Deck， 无锁
+	SetDeck(deck Deck) (err error)
+
+	//GetDeck获取Deck， 无锁
+	GetDeck(did string) (deck Deck, err error)
+
+	//SetCardSource设置CardSource， 无锁
+	SetCardSource(cs CardSource) (err error)
+
+	//GetCardSource获取CardSource， 无锁
+	GetCardSource(csid string) (cs CardSource, err error)
+
+	//SetCard设置Card， 无锁
+	SetCard(card Card) (err error)
+
+	//GetCard获取Card， 无锁
+	GetCard(cardID string) (card Card, err error)
 }
 
 type BaseRiff struct {
-	Db                     *xorm.Engine
+	db                     *xorm.Engine
 	GlobalRequestRetention float64
 	MaxRequestRetention    float64
 	MinRequestRetention    float64
 	lock                   *sync.Mutex
+	load                   *sync.Mutex
 	startTime              time.Time
 	ParamsMap              map[Algo]interface{}
+	deckMap                map[string]Deck
+	cardSourceMap          map[string]CardSource
+	cardMap                map[string]Card
 }
 
 func NewBaseRiff() Riff {
 	// orm, err := xorm.NewEngine("sqlite", ":memory:?_pragma=foreign_keys(1)")
 	orm, err := xorm.NewEngine("sqlite3", ":memory:?mode=memory&cache=shared&loc=auto")
+	orm.Exec(`
+	create view block_id_to_card_source as 
+	select c_s_i_d,value
+	from 
+	base_card_source , json_each(base_card_source.block_i_ds)`)
 	if err != nil {
 		return &BaseRiff{}
 	}
 	orm.Sync(new(BaseCard), new(BaseCardSource), new(BaseDeck), new(BaseHistory), new(ReviewLog))
 	riff := BaseRiff{
-		Db:                     orm,
+		db:                     orm,
 		GlobalRequestRetention: 0.900,
 		MaxRequestRetention:    0.999,
 		MinRequestRetention:    0.500,
 		lock:                   &sync.Mutex{},
+		load:                   &sync.Mutex{},
 		startTime:              time.Now(),
 		ParamsMap:              map[Algo]interface{}{},
+		deckMap:                map[string]Deck{},
+		cardSourceMap:          map[string]CardSource{},
+		cardMap:                map[string]Card{},
 	}
 	return &riff
 }
@@ -88,7 +119,8 @@ func (br *BaseRiff) QueryCard() []Card {
 func (br *BaseRiff) AddDeck(deck Deck) (newDeck Deck, err error) {
 	br.lock.Lock()
 	defer br.lock.Unlock()
-	_, err = br.Db.Insert(deck)
+	br.deckMap[deck.GetDID()] = deck
+	_, err = br.db.Insert(deck)
 	newDeck = deck
 	return
 }
@@ -119,7 +151,7 @@ func (br *BaseRiff) batchCheck(table, field string, IDs []string) (existMap map[
 			end = IDsLength
 		}
 		subIDs := IDs[i:end]
-		err = br.Db.Table(table).
+		err = br.db.Table(table).
 			In(field, subIDs).
 			Cols(field).
 			Find(&existsIDs)
@@ -153,7 +185,7 @@ func (br *BaseRiff) batchInsert(rowSlice interface{}) (err error) {
 	}
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowSlice))
 	Len := sliceValue.Len()
-	session := br.Db.NewSession()
+	session := br.db.NewSession()
 	defer session.Close()
 	session.Begin()
 	for i := 0; i < Len; i++ {
@@ -191,6 +223,8 @@ func (br *BaseRiff) AddCardSource(cardSources []CardSource) (cardSourceList []Ca
 		}
 		if unExist == 0 {
 			existsCardSourceList = append(existsCardSourceList, cardSource)
+			// 添加到 cardSourceMap
+			br.cardSourceMap[cardSource.GetCSID()] = cardSource
 		}
 	}
 
@@ -218,6 +252,7 @@ func (br *BaseRiff) AddCard(cards []Card) (cardList []Card, err error) {
 
 	for _, card := range cards {
 		if existCSIDMap[card.GetCSID()] {
+			br.cardMap[card.ID()] = card
 			existsCardList = append(existsCardList, card)
 		}
 	}
@@ -245,45 +280,30 @@ func saveData(data interface{}, suffix SaveExt, saveDirPath string) (err error) 
 func (br *BaseRiff) Find(beans interface{}, condiBeans ...interface{}) error {
 	br.lock.Lock()
 	defer br.lock.Unlock()
-	err := br.Db.Find(beans, condiBeans...)
+	err := br.db.Find(beans, condiBeans...)
 	return err
 }
 
 func (br *BaseRiff) Get(beans ...interface{}) error {
 	br.lock.Lock()
 	defer br.lock.Unlock()
-	_, err := br.Db.Get(beans...)
+	_, err := br.db.Get(beans...)
 	return err
 }
 
 func (br *BaseRiff) Save(path string) (err error) {
-	// 空实现
-
 	decks := make([]BaseDeck, 0)
 	cardSources := make([]BaseCardSource, 0)
 	cards := make([]BaseCard, 0)
-	err = br.Find(&decks)
 
-	if err != nil {
-		return
+	for _, deck := range br.deckMap {
+		decks = append(decks, *(deck.(*BaseDeck)))
 	}
-
-	err = br.Find(&cardSources)
-
-	if err != nil {
-		return
+	for _, cardSource := range br.cardSourceMap {
+		cardSources = append(cardSources, *(cardSource.(*BaseCardSource)))
 	}
-
-	err = br.Find(&cards)
-
-	if err != nil {
-		return
-	}
-
-	err = br.SaveHistory(path)
-
-	if err != nil {
-		return
+	for _, card := range br.cardMap {
+		cards = append(cards, *(card.(*BaseCard)))
 	}
 
 	if !gulu.File.IsDir(path) {
@@ -293,21 +313,18 @@ func (br *BaseRiff) Save(path string) (err error) {
 	}
 	err = saveData(decks, DeckExt, path)
 	if err != nil {
-		return
+		fmt.Printf("err in save riff data: %s \n", err)
 	}
 	err = saveData(cardSources, CardSourceExt, path)
 	if err != nil {
-		return
-	}
-
-	// card需要先反序列化Impl
-	for index := range cards {
-		cards[index].UnmarshalImpl()
+		fmt.Printf("err in save riff data: %s \n", err)
 	}
 	err = saveData(cards, CardExt, path)
 	if err != nil {
-		return
+		fmt.Printf("err in save riff data: %s \n", err)
 	}
+
+	err = br.SaveHistory(path)
 
 	return
 }
@@ -456,74 +473,54 @@ func (br *BaseRiff) Due() []ReviewInfo {
 	defer br.lock.Unlock()
 
 	ris := make([]ReviewInfo, 0)
+
+func (br *BaseRiff) Due() (ret []ReviewInfo) {
 	now := time.Now()
 
-	err := br.Db.Table("base_card").
-		Select("base_card_source.*, base_card.*").
-		Join("INNER", "base_card_source", "base_card_source.c_s_i_d = base_card.c_s_i_d").
-		Where("base_card.due < ?", now).
-		Find(&ris)
-
-	if err != nil {
-		fmt.Printf("%s", err)
-	}
-	for i := range ris {
-		ris[i].UnmarshalImpl()
-	}
-	return ris
-}
-
-func (br *BaseRiff) GetCardsByBlockIDs(blockIDs []string) (ret []ReviewInfo) {
-	br.lock.Lock()
-	defer br.lock.Unlock()
-	ret = make([]ReviewInfo, 0)
-	// bscs := make([]BaseCardSource, 0)
-
-	reviewInfo := new(ReviewInfo)
-	rows, err := br.Db.Table("base_card").
-		Join("inner", "base_card_source", "base_card.c_s_i_d = base_card_source.c_s_i_d").
-		Rows(reviewInfo)
+	qr := br.newReviewInfoQuery()
+	qr, err := qr.ByDue(now)
 	if err != nil {
 		return
 	}
-	queryBlockIDs := make(map[string]bool, 0)
-	for _, blockID := range blockIDs {
-		queryBlockIDs[blockID] = true
-	}
-	for rows.Next() {
-		reviewInfo := new(ReviewInfo)
-		existsNum := 0
-		rows.Scan(reviewInfo)
-		for _, blockID := range reviewInfo.BlockIDs {
-			if queryBlockIDs[blockID] {
-				existsNum += 1
-			}
-		}
-		if existsNum > 0 {
-			ret = append(ret, *reviewInfo)
-		}
-	}
+	ret, err = qr.Query()
 	if err != nil {
-		fmt.Printf("%s", err)
-	}
-	for i := range ret {
-		ret[i].UnmarshalImpl()
+		ret = make([]ReviewInfo, 0)
+		return
 	}
 	return
 }
 
+func (br *BaseRiff) GetCardsByBlockIDs(blockIDs []string) (ret []ReviewInfo) {
+
+	qr := br.newReviewInfoQuery()
+	qr, err := qr.ByBlockIDs(blockIDs)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	ret, err = qr.Query()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return
+}
+
 func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float64) {
+	// TODO review时更新card status
 	br.lock.Lock()
 	defer br.lock.Unlock()
 	now := time.Now()
 
 	history := NewBaseHistory(card)
 	reviewlog := NewReviewLog(history, rating)
-	_, err := br.Db.Insert(history)
+	_, err := br.db.Insert(history)
 	if err != nil {
 		logging.LogErrorf("error insert history %s \n", err)
 	}
-	_, err = br.Db.Insert(reviewlog)
+	_, err = br.db.Insert(reviewlog)
 	if err != nil {
 		logging.LogErrorf("error insert reviewLog %s \n", err)
 	}
@@ -545,21 +542,19 @@ func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float
 	default:
 		card.SetReps(card.GetReps() + 1)
 	}
-	card.MarshalImpl()
-	_, err = br.Db.Where("c_i_d = ?", card.ID()).Update(card)
-	if err != nil {
-		fmt.Printf("update card err:%s\n", err)
-	}
+	br.SetCard(card)
 }
 
 func (br *BaseRiff) Review(cardID string, rating Rating) {
-	card := BaseCard{
-		CID: cardID,
+	br.lock.Lock()
+	card, err := br.GetCard(cardID)
+	br.lock.Unlock()
+	if err != nil {
+		return
 	}
-	br.Get(&card)
-	card.UnmarshalImpl()
-	RequestRetention := br.getRequestRetention(&card)
-	br.innerReview(&card, rating, RequestRetention)
+
+	RequestRetention := br.getRequestRetention((card))
+	br.innerReview(card, rating, RequestRetention)
 
 }
 func (br *BaseRiff) getRequestRetention(card Card) float64 {
@@ -582,6 +577,159 @@ func (br *BaseRiff) CountCards() int {
 func (br *BaseRiff) GetBlockIDs() (ret []string) {
 	// 空实现
 	return nil
+}
+
+func (br *BaseRiff) SetDeck(deck Deck) (err error) {
+	br.deckMap[deck.GetDID()] = deck
+	_, err = br.db.Where("d_i_d = ?", deck.GetDID()).Update(deck)
+	return
+}
+
+func (br *BaseRiff) GetDeck(did string) (deck Deck, err error) {
+	deck, exist := br.deckMap[did]
+	if !exist {
+		err = fmt.Errorf("deck %s is not exist", did)
+	}
+	return
+}
+
+func (br *BaseRiff) SetCardSource(cs CardSource) (err error) {
+	br.cardSourceMap[cs.GetCSID()] = cs
+	_, err = br.db.Where("c_s_i_d = ?", cs.GetCSID()).Update(cs)
+	return
+}
+
+func (br *BaseRiff) GetCardSource(csid string) (cs CardSource, err error) {
+	cs, exist := br.cardSourceMap[csid]
+	if !exist {
+		err = fmt.Errorf("CardSource %s is not exist", csid)
+	}
+	return
+}
+
+func (br *BaseRiff) SetCard(card Card) (err error) {
+	br.cardMap[card.ID()] = card
+	card.MarshalImpl()
+	_, err = br.db.Where("c_i_d = ?", card.ID()).Update(card)
+	if err != nil {
+		fmt.Printf("update card err:%s\n", err)
+	}
+
+	return
+}
+
+func (br *BaseRiff) GetCard(cardID string) (card Card, err error) {
+	card, exist := br.cardMap[cardID]
+	if !exist {
+		err = fmt.Errorf("card %s is not exist", cardID)
+	}
+	return
+}
+
+// QueryReviewInfo 是对 ReviewInfo 搜索查询操作的抽象和封装
+type QueryReviewInfo interface {
+	ByBlockIDs(blockIDs []string) (ret QueryReviewInfo, err error)
+	ByDue(dueTime time.Time) (ret QueryReviewInfo, err error)
+	Query() (ret []ReviewInfo, err error)
+	Conut() (ret int64, err error)
+}
+type baseQueryReviewInfo struct {
+	br      *BaseRiff
+	db      *xorm.Engine
+	sission *xorm.Session
+	lock    *sync.Mutex
+}
+
+func (br *BaseRiff) newReviewInfoQuery() (ret QueryReviewInfo) {
+	br.lock.Lock()
+	defer br.lock.Unlock()
+	session := br.db.Table("base_card").
+		Join("inner", "base_card_source", "base_card.c_s_i_d = base_card_source.c_s_i_d")
+	ret = &baseQueryReviewInfo{
+		br:      br,
+		db:      br.db,
+		sission: session,
+		lock:    br.lock,
+	}
+	return
+}
+
+func (qr *baseQueryReviewInfo) ByBlockIDs(blockIDs []string) (ret QueryReviewInfo, err error) {
+	qr.lock.Lock()
+	defer qr.lock.Unlock()
+
+	ret = qr
+
+	csidList := make([]string, 0)
+	queryLen := len(blockIDs)
+	if queryLen > MAX_QUERY_PARAMS {
+		queryLen = MAX_QUERY_PARAMS
+	}
+	queryBlockIDs := blockIDs[0:queryLen]
+
+	err = qr.db.Table("base_card_source").
+		Join("inner", "block_id_to_card_source", "base_card_source.c_s_i_d = block_id_to_card_source.c_s_i_d").
+		In("block_id_to_card_source.value", queryBlockIDs).
+		Distinct("base_card_source.c_s_i_d").Find(&csidList)
+
+	if err != nil {
+		return
+	}
+
+	queryCsidLen := len(csidList)
+	if queryCsidLen > MAX_QUERY_PARAMS {
+		queryCsidLen = MAX_QUERY_PARAMS
+	}
+	queryCsidList := csidList[0:queryCsidLen]
+
+	qr.sission.In("base_card_source.c_s_i_d", queryCsidList)
+	return
+}
+
+func (qr *baseQueryReviewInfo) ByDue(dueTime time.Time) (ret QueryReviewInfo, err error) {
+	qr.lock.Lock()
+	defer qr.lock.Unlock()
+
+	ret = qr
+
+	qr.sission.Where("base_card.due < ?", dueTime)
+	return
+}
+
+func (qr *baseQueryReviewInfo) Query() (ret []ReviewInfo, err error) {
+	qr.lock.Lock()
+	defer qr.lock.Unlock()
+	ret = make([]ReviewInfo, 0)
+	reviewInfoIDList, err := qr.sission.
+		Cols("base_card.c_i_d", "base_card_source.c_s_i_d").
+		QueryString()
+	if err != nil {
+		return
+	}
+	for _, item := range reviewInfoIDList {
+		card, err := qr.br.GetCard(item["c_i_d"])
+		if err != nil {
+			continue
+		}
+		cs, err := qr.br.GetCardSource(item["c_s_i_d"])
+		if err != nil {
+			continue
+		}
+		ret = append(ret, ReviewInfo{
+			BaseCard:       *(card.(*BaseCard)),
+			BaseCardSource: *(cs.(*BaseCardSource)),
+		})
+	}
+
+	return
+}
+
+func (qr *baseQueryReviewInfo) Conut() (ret int64, err error) {
+	qr.lock.Lock()
+	defer qr.lock.Unlock()
+	ri := new(ReviewInfo)
+	ret, err = qr.sission.Count(ri)
+	return
 }
 
 // Rating 描述了闪卡复习的评分。
@@ -634,6 +782,8 @@ const (
 )
 
 const builtInDeck = "20240718214745-q7ocvvi"
+
+const MAX_QUERY_PARAMS = 3_0000
 
 func newID() string {
 	now := time.Now()

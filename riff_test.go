@@ -68,13 +68,14 @@ func randomSubset[T any](slice []T, size int) ([]T, error) {
 	}
 
 	// Create a copy of the original slice to avoid modifying it
-	subset := make([]T, len(slice))
-	copy(subset, slice)
 
-	// Shuffle the copy
-	rand.Shuffle(len(subset), func(i, j int) {
-		subset[i], subset[j] = subset[j], subset[i]
-	})
+	subset := make([]T, size)
+	// copy(subset, slice)
+	sourceLen := len(slice)
+
+	for i := range subset {
+		subset[i] = slice[rand.Intn(sourceLen)]
+	}
 
 	// Return the first `size` elements
 	return subset[:size], nil
@@ -337,7 +338,7 @@ func TestPerformance(t *testing.T) {
 	reviewInfoList := riff.Due()
 	ticker.log("query due")
 
-	fmt.Printf("due card len :%d", len(reviewInfoList))
+	fmt.Printf("due card len :%d \n", len(reviewInfoList))
 
 	ticker.start("review")
 	for _, reviewInfo := range reviewInfoList {
@@ -375,7 +376,7 @@ func TestPerformance(t *testing.T) {
 		mapCSIDs := blockIDsCIDMap[blockID]
 		for _, csid := range mapCSIDs {
 			if !existMap[csid] {
-				// t.Errorf("blockID %s cardSource %s no call back", blockID, csid)
+				t.Errorf("blockID %s cardSource %s no call back", blockID, csid)
 			}
 		}
 	}
@@ -388,7 +389,8 @@ func TestPerformance(t *testing.T) {
 	ticker.start("load")
 	newRiff := NewBaseRiff()
 	newRiff.SetParams(AlgoFSRS, fsrs.DefaultParam())
-	newRiff.Load(saveDir)
+	go newRiff.Load(saveDir)
+
 	ticker.log("load")
 
 	// 检查重新加载后 数据是否恢复
@@ -398,6 +400,7 @@ func TestPerformance(t *testing.T) {
 
 	// 确保cardsource完全插入数据库
 	ticker.start("query total cardSource")
+	newRiff.WaitLoad()
 	newRiff.Find(&queryCsList)
 	ticker.log("query total cardSource")
 
