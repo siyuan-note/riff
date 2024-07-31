@@ -505,7 +505,6 @@ func (br *BaseRiff) GetCardsByBlockIDs(blockIDs []string) (ret []ReviewInfo) {
 }
 
 func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float64) {
-	// TODO review时更新card status
 	br.lock.Lock()
 	defer br.lock.Unlock()
 	now := time.Now()
@@ -531,13 +530,34 @@ func (br *BaseRiff) innerReview(card Card, rating Rating, RequestRetention float
 		card.SetDue(newCard.Due)
 		card.SetImpl(newCard)
 	}
-	switch rating {
-	case Again:
-		card.SetLapses(card.GetLapses() + 1)
-		card.SetReps(card.GetReps() + 1)
-	default:
-		card.SetReps(card.GetReps() + 1)
+
+	RatingMap := map[Rating]State{}
+	preState := card.GetState()
+	switch preState {
+	case New:
+		RatingMap[Again] = Learning
+		RatingMap[Hard] = Learning
+		RatingMap[Good] = Learning
+		RatingMap[Easy] = Review
+
+	case Learning, Relearning:
+		RatingMap[Again] = preState
+		RatingMap[Hard] = preState
+		RatingMap[Good] = Review
+		RatingMap[Easy] = Review
+	case Review:
+		RatingMap[Again] = Relearning
+		RatingMap[Hard] = Review
+		RatingMap[Good] = Review
+		RatingMap[Easy] = Review
 	}
+	currentState := RatingMap[rating]
+	card.SetState(currentState)
+	card.SetReps(card.GetReps() + 1)
+	if currentState == Relearning {
+		card.SetLapses(card.GetLapses() + 1)
+	}
+
 	br.SetCard(card)
 }
 
