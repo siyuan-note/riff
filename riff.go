@@ -676,20 +676,26 @@ func (qr *baseQueryReviewInfo) ByBlockIDs(blockIDs []string) (ret QueryReviewInf
 
 	ret = qr
 
+	existSet := map[string]bool{}
+	csidMap := map[string]bool{}
 	csidList := make([]string, 0)
-	queryLen := len(blockIDs)
-	if queryLen > MAX_QUERY_PARAMS {
-		queryLen = MAX_QUERY_PARAMS
+
+	for _, blockID := range blockIDs {
+		existSet[blockID] = true
 	}
-	queryBlockIDs := blockIDs[0:queryLen]
 
-	err = qr.db.Table("base_card_source").
-		Join("inner", "block_id_to_card_source", "base_card_source.c_s_i_d = block_id_to_card_source.c_s_i_d").
-		In("block_id_to_card_source.value", queryBlockIDs).
-		Distinct("base_card_source.c_s_i_d").Find(&csidList)
+	for _, cs := range qr.br.cardSourceMap {
+		csBlockIDs := cs.GetBlockIDs()
+		csid := cs.GetCSID()
+		for _, csBlockID := range csBlockIDs {
+			if existSet[csBlockID] {
+				csidMap[csid] = true
+			}
+		}
+	}
 
-	if err != nil {
-		return
+	for csid := range csidMap {
+		csidList = append(csidList, csid)
 	}
 
 	queryCsidLen := len(csidList)

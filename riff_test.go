@@ -368,6 +368,7 @@ func TestPerformance(t *testing.T) {
 	ticker.start("get card by blocks")
 	testBlockIDs, _ := randomSubset(blocksIDs, blocksNum)
 	reviewInfoByblocks := riff.GetCardsByBlockIDs(testBlockIDs)
+	fmt.Printf("reviewInfoByblocks len :%d \n", len(reviewInfoByblocks))
 	existMap := map[string]bool{}
 	for _, ri := range reviewInfoByblocks {
 		existMap[ri.BaseCardSource.CSID] = true
