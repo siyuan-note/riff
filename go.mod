@@ -20,7 +20,7 @@ require (
 	github.com/google/pprof v0.0.0-20240430035430-e4905b036c4e // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/imroc/req/v3 v3.43.3 // indirect
+	github.com/imroc/req/v3 v3.43.4 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/onsi/ginkgo/v2 v2.17.2 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
