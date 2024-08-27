@@ -17,13 +17,14 @@
 package riff
 
 import (
-	"github.com/88250/gulu"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/open-spaced-repetition/go-fsrs"
+	"github.com/88250/gulu"
+
+	"github.com/open-spaced-repetition/go-fsrs/v2"
 )
 
 const (

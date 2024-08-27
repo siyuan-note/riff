@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/88250/gulu"
-	"github.com/open-spaced-repetition/go-fsrs"
+	"github.com/open-spaced-repetition/go-fsrs/v2"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/vmihailenco/msgpack/v5"
@@ -42,7 +42,7 @@ func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval 
 	params := fsrs.DefaultParam()
 	params.RequestRetention = requestRetention
 	params.MaximumInterval = float64(maximumInterval)
-	params.W = [17]float64{}
+	params.W = [19]float64{0}
 	for i, w := range strings.Split(weights, ",") {
 		w = strings.TrimSpace(w)
 		params.W[i], _ = strconv.ParseFloat(w, 64)
