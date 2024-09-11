@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/88250/gulu"
-	"github.com/open-spaced-repetition/go-fsrs/v2"
+	"github.com/open-spaced-repetition/go-fsrs/v3"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/vmihailenco/msgpack/v5"
@@ -34,8 +34,8 @@ import (
 type FSRSStore struct {
 	*BaseStore
 
-	cards  map[string]*FSRSCard
-	params fsrs.Parameters
+	cards     map[string]*FSRSCard
+	scheduler fsrs.FSRS
 }
 
 func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval int, weights string) *FSRSStore {
@@ -47,11 +47,12 @@ func NewFSRSStore(id, saveDir string, requestRetention float64, maximumInterval 
 		w = strings.TrimSpace(w)
 		params.W[i], _ = strconv.ParseFloat(w, 64)
 	}
+	scheduler := *fsrs.NewFSRS(params)
 
 	return &FSRSStore{
 		BaseStore: NewBaseStore(id, "fsrs", saveDir),
 		cards:     map[string]*FSRSCard{},
-		params:    params,
+		scheduler: scheduler,
 	}
 }
 
@@ -188,7 +189,7 @@ func (store *FSRSStore) Review(cardId string, rating Rating) (ret *Log) {
 		return
 	}
 
-	schedulingInfo := store.params.Repeat(*card.C, now)
+	schedulingInfo := store.scheduler.Repeat(*card.C, now)
 	updated := schedulingInfo[fsrs.Rating(rating)].Card
 	card.SetImpl(&updated)
 	store.cards[cardId] = card
@@ -217,7 +218,7 @@ func (store *FSRSStore) Dues() (ret []Card) {
 			continue
 		}
 
-		schedulingInfos := store.params.Repeat(*c, now)
+		schedulingInfos := store.scheduler.Repeat(*c, now)
 		nextDues := map[Rating]time.Time{}
 		for rating, schedulingInfo := range schedulingInfos {
 			nextDues[Rating(rating)] = schedulingInfo.Card.Due

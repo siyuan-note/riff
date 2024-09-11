@@ -24,7 +24,7 @@ import (
 
 	"github.com/88250/gulu"
 
-	"github.com/open-spaced-repetition/go-fsrs/v2"
+	"github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
 const (
@@ -40,6 +40,7 @@ func TestFSRSStore(t *testing.T) {
 
 	store := NewFSRSStore("test-store", storePath, requestRetention, maximumInterval, weights)
 	p := fsrs.DefaultParam()
+	scheduler := *fsrs.NewFSRS(p)
 	start := time.Now()
 	repeatTime := start
 	ids := map[string]bool{}
@@ -60,7 +61,7 @@ func TestFSRSStore(t *testing.T) {
 		ids[id] = true
 
 		for j := 0; j < 10; j++ {
-			schedulingInfo := p.Repeat(c, repeatTime)
+			schedulingInfo := scheduler.Repeat(c, repeatTime)
 			c = schedulingInfo[fsrs.Hard].Card
 			repeatTime = c.Due
 		}
