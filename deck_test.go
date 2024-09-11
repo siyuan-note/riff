@@ -20,7 +20,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/open-spaced-repetition/go-fsrs/v2"
+	"github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
 func TestDeck(t *testing.T) {

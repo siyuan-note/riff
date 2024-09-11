@@ -31,8 +31,8 @@ github.com/onsi/ginkgo/v2 v2.20.1 h1:YlVIbqct+ZmnEph770q9Q7NVAz4wwIiVNahee6JyUzo
 github.com/onsi/ginkgo/v2 v2.20.1/go.mod h1:lG9ey2Z29hR41WMVthyJBGUBcBhGOtoPF2VFMvBXFCI=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
-github.com/open-spaced-repetition/go-fsrs/v2 v2.0.1 h1:ODpQGZqZNsKqAF4/WUdRtfuNtwDIfI6Xj3cSznxk0g0=
-github.com/open-spaced-repetition/go-fsrs/v2 v2.0.1/go.mod h1:Ry+MLx079nUXwSbYm+OYLK9pQ9yu0cCLWSo3N4H5ZBI=
+github.com/open-spaced-repetition/go-fsrs/v3 v3.1.0 h1:wsNqYC0poLo1+4c9T4AoYvsPMpyTIjYpf2PpWbgJf7k=
+github.com/open-spaced-repetition/go-fsrs/v3 v3.1.0/go.mod h1:zTtQIk3kOO9kweg5zJAgbdwBXR2HBPsDN0k6AxmTpzY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
