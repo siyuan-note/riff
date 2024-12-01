@@ -6,7 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/88250/gulu v1.2.3-0.20240612035750-c9cf5f7a4d02
-	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0
+	github.com/open-spaced-repetition/go-fsrs/v3 v3.3.0
 	github.com/siyuan-note/filelock v0.0.0-20240724034355-d1ed7bf21d04
 	github.com/siyuan-note/logging v0.0.0-20240505035402-6430d57006a2
 	github.com/vmihailenco/msgpack/v5 v5.4.1
