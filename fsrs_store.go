@@ -251,6 +251,11 @@ func (store *FSRSStore) Load() (err error) {
 }
 
 func (store *FSRSStore) Save() (err error) {
+	return store.SaveWithWriter(filelock.WriteFile)
+}
+
+// SaveWithWriter preserves the cards format while allowing write-ahead recording.
+func (store *FSRSStore) SaveWithWriter(write func(string, []byte) error) (err error) {
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
@@ -267,7 +272,7 @@ func (store *FSRSStore) Save() (err error) {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
 	}
-	if err = filelock.WriteFile(p, data); nil != err {
+	if err = write(p, data); nil != err {
 		logging.LogErrorf("save cards failed: %s", err)
 		return
 	}

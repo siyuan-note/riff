@@ -169,11 +169,24 @@ func (deck *Deck) CountCards() int {
 
 // Save 保存闪卡包。
 func (deck *Deck) Save() (err error) {
+	return deck.SaveWithWriter(filelock.WriteFile)
+}
+
+// SaveWithWriter serializes the same persisted representation as Save, routing
+// each source-file replacement through write. The caller can journal intended
+// bytes before writing them. Errors stop subsequent writes and are returned.
+func (deck *Deck) SaveWithWriter(write func(string, []byte) error) (err error) {
 	deck.lock.Lock()
 	defer deck.lock.Unlock()
 
 	deck.Updated = time.Now().UnixMilli()
-	err = deck.store.Save()
+	store, ok := deck.store.(interface {
+		SaveWithWriter(func(string, []byte) error) error
+	})
+	if !ok || write == nil {
+		return errors.New("store does not support transactional saves")
+	}
+	err = store.SaveWithWriter(write)
 	if nil != err {
 		logging.LogErrorf("save deck [%s] failed: %s", deck.Name, err)
 		return
@@ -186,7 +199,7 @@ func (deck *Deck) Save() (err error) {
 		logging.LogErrorf("save deck failed: %s", err)
 		return
 	}
-	if err = filelock.WriteFile(dataPath, data); nil != err {
+	if err = write(dataPath, data); nil != err {
 		logging.LogErrorf("save deck failed: %s", err)
 		return
 	}
